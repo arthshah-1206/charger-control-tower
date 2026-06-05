@@ -429,12 +429,13 @@ function getFaultTree(chargerNum: string, subsystemId: string): FaultEquipment[]
 }
 
 const HEALTH_PILL_CLS: Record<HealthStatus, string> = {
-  healthy:   'bg-emerald-100 text-emerald-700',
-  deration:  'bg-amber-100   text-amber-700',
-  breakdown: 'bg-red-100     text-red-700',
+  healthy:    'bg-emerald-100 text-emerald-700',
+  deration:   'bg-amber-100   text-amber-700',
+  breakdown:  'bg-red-100     text-red-700',
+  'grid-down': 'bg-sky-100    text-sky-700',
 }
 const HEALTH_LABEL: Record<HealthStatus, string> = {
-  healthy: 'Healthy', deration: 'Deration', breakdown: 'Breakdown',
+  healthy: 'Healthy', deration: 'Deration', breakdown: 'Breakdown', 'grid-down': 'On DG',
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
