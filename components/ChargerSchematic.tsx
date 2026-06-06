@@ -41,15 +41,16 @@ interface CCTVCamera {
   label: string
   zone: string
   online: boolean
-  style: { left: string; top?: string; right?: string; bottom?: string }
+  rotation?: number  // degrees applied to the Video icon to show aim direction
+  style: { left?: string; top?: string; right?: string; bottom?: string }
 }
 
 const INTERIOR_CAMS: CCTVCamera[] = [
-  { id: 'cam-int-01', label: 'Interior NW',     zone: 'Charger Interior', online: true,  style: { left: '1%',  top: '2%'  } },
-  { id: 'cam-int-02', label: 'Interior SW',     zone: 'Charger Interior', online: true,  style: { left: '1%',  top: '78%' } },
-  { id: 'cam-int-03', label: 'Interior Center', zone: 'Charger Interior', online: false, style: { left: '27%', top: '2%'  } },
-  { id: 'cam-int-04', label: 'Interior NE',     zone: 'Charger Interior', online: true,  style: { left: '84%', top: '2%'  } },
-  { id: 'cam-int-05', label: 'Interior SE',     zone: 'Charger Interior', online: true,  style: { left: '84%', top: '64%' } },
+  { id: 'cam-int-01', label: 'Interior BL', zone: 'Charger Interior', online: true,  rotation: -45,  style: { left: '1%',   bottom: '2%' } },
+  { id: 'cam-int-02', label: 'Interior BR', zone: 'Charger Interior', online: true,  rotation: -135, style: { right: '1%',  bottom: '2%' } },
+  { id: 'cam-int-03', label: 'Interior ML', zone: 'Charger Interior', online: false, rotation: 0,    style: { left: '1%',   top: '44%'   } },
+  { id: 'cam-int-04', label: 'Interior TR', zone: 'Charger Interior', online: true,  rotation: 135,  style: { right: '8%',  top: '2%'    } },
+  { id: 'cam-int-05', label: 'Interior TR', zone: 'Charger Interior', online: true,  rotation: 180,  style: { right: '1%',  top: '8%'    } },
 ]
 
 const BAY_CAMS: CCTVCamera[] = [
@@ -483,7 +484,12 @@ export default function ChargerSchematic({ chargerNum }: { chargerNum: string })
       className="absolute z-20 cursor-pointer group"
     >
       <div className={`relative flex items-center justify-center w-5 h-5 rounded-md transition-all group-hover:scale-125 ${cam.online ? 'bg-emerald-500/15 hover:bg-emerald-500/25' : 'bg-red-500/15 hover:bg-red-500/25'}`}>
-        <Video size={10} className={cam.online ? 'text-emerald-600' : 'text-red-500'} strokeWidth={2.5} />
+        <Video
+          size={10}
+          className={cam.online ? 'text-emerald-600' : 'text-red-500'}
+          strokeWidth={2.5}
+          style={cam.rotation ? { transform: `rotate(${cam.rotation}deg)` } : undefined}
+        />
         <span className={`absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full border border-white ${cam.online ? 'bg-emerald-500' : 'bg-red-500'}`} />
       </div>
     </button>
