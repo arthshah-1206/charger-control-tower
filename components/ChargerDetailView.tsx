@@ -141,17 +141,24 @@ function perfColor(val: number, isGreen?: (v: number) => boolean): string | unde
   return isGreen(val) ? '#1a7a40' : '#b91c1c'
 }
 
-function MiniBarChart({ seed, n, lo, hi, target, targets, grouped, integer, unit }: {
+function MiniBarChart({ seed, n, lo, hi, target, targets, grouped, integer, unit, d2Lo, d2Hi, d2Unit, groupLabels }: {
   seed: number; n: number; lo: number; hi: number; target?: number; targets?: { value: number; color: string }[]; grouped?: true; integer?: true; unit?: string
+  d2Lo?: number; d2Hi?: number; d2Unit?: string; groupLabels?: [string, string]
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const hovRef    = useRef<number | null>(null)
   const [tip, setTip] = useState<{ x: number; y: number; text: string } | null>(null)
 
-  const mk = (s: number) => Array.from({ length: n }, (_, i) => {
+  const mk  = (s: number) => Array.from({ length: n }, (_, i) => {
     const v = lo + Math.abs(Math.sin(s * 127.1 + i * 311.7)) * (hi - lo)
     return integer ? Math.round(v) : v
   })
+  // separate generator for d2 when it has its own value range
+  const mk2 = (d2Lo != null && d2Hi != null)
+    ? (s: number) => Array.from({ length: n }, (_, i) =>
+        d2Lo + Math.abs(Math.sin(s * 127.1 + i * 311.7)) * (d2Hi - d2Lo)
+      )
+    : mk
 
   function paint(hov: number | null) {
     const el = canvasRef.current
@@ -163,8 +170,10 @@ function MiniBarChart({ seed, n, lo, hi, target, targets, grouped, integer, unit
     const ctx = el.getContext('2d')
     if (!ctx) return
     ctx.scale(dpr, dpr)
-    const d1 = mk(seed), d2 = grouped ? mk(seed + 50) : []
-    const mx = Math.max(...d1, ...d2, target ?? 0, ...(targets?.map(t => t.value) ?? [])) * 1.15 || 1
+    const d1 = mk(seed), d2 = grouped ? mk2(seed + 50) : []
+    // normalize each series independently so neither dwarfs the other
+    const mx1 = Math.max(...d1, target ?? 0, ...(targets?.map(t => t.value) ?? [])) * 1.15 || 1
+    const mx2 = d2.length > 0 ? Math.max(...d2) * 1.15 || 1 : mx1
     let barEnd = W
     if (grouped) {
       const gGap = 3, bGap = 1
@@ -173,10 +182,10 @@ function MiniBarChart({ seed, n, lo, hi, target, targets, grouped, integer, unit
       barEnd = (n - 1) * (gW + gGap) + gW
       d1.forEach((v, i) => {
         const x = i * (gW + gGap)
-        const h1 = Math.max(1, Math.round((v / mx) * (H - 2)))
+        const h1 = Math.max(1, Math.round((v / mx1) * (H - 2)))
         ctx.fillStyle = i === hov ? '#7ba3bd' : '#c5d5e8'
         ctx.fillRect(x, H - h1, bw, h1)
-        const h2 = Math.max(1, Math.round((d2[i] / mx) * (H - 2)))
+        const h2 = Math.max(1, Math.round((d2[i] / mx2) * (H - 2)))
         ctx.fillStyle = i === hov ? '#6890a8' : '#a8bdd4'
         ctx.fillRect(x + bw + bGap, H - h2, bw, h2)
       })
@@ -184,7 +193,7 @@ function MiniBarChart({ seed, n, lo, hi, target, targets, grouped, integer, unit
       const gap = 2, bw = Math.floor((W - gap * (n - 1)) / n)
       barEnd = (n - 1) * (bw + gap) + bw
       d1.forEach((v, i) => {
-        const bh = Math.max(1, Math.round((v / mx) * (H - 2)))
+        const bh = Math.max(1, Math.round((v / mx1) * (H - 2)))
         ctx.fillStyle = i === hov ? '#7ba3bd' : '#c5d5e8'
         ctx.fillRect(i * (bw + gap), H - bh, bw, bh)
       })
@@ -198,7 +207,7 @@ function MiniBarChart({ seed, n, lo, hi, target, targets, grouped, integer, unit
       ctx.beginPath(); ctx.rect(0, 0, barEnd, H); ctx.clip()
       ctx.setLineDash([4, 3]); ctx.lineWidth = 1
       for (const line of lines) {
-        const ty = Math.round(H - (line.value / mx) * (H - 2)) + 0.5
+        const ty = Math.round(H - (line.value / mx1) * (H - 2)) + 0.5
         ctx.strokeStyle = line.color
         ctx.beginPath(); ctx.moveTo(0, ty); ctx.lineTo(barEnd, ty); ctx.stroke()
       }
@@ -216,7 +225,7 @@ function MiniBarChart({ seed, n, lo, hi, target, targets, grouped, integer, unit
     if (!el) return
     const W = el.offsetWidth
     const x = e.clientX - el.getBoundingClientRect().left
-    const d1 = mk(seed), d2 = grouped ? mk(seed + 50) : []
+    const d1 = mk(seed), d2 = grouped ? mk2(seed + 50) : []
     let idx: number
     if (grouped) {
       const gGap = 3, gW = Math.floor((W - gGap * (n - 1)) / n)
@@ -233,7 +242,9 @@ function MiniBarChart({ seed, n, lo, hi, target, targets, grouped, integer, unit
     setTip({
       x: e.clientX, y: e.clientY,
       text: v2 !== undefined
-        ? `${label} · Crit: ${v.toFixed(1)}h · Non-crit: ${v2.toFixed(1)}h`
+        ? groupLabels
+          ? `${label} · ${groupLabels[0]}: ${fmt(v)}${u} · ${groupLabels[1]}: ${v2.toFixed(1)}${d2Unit ? ' ' + d2Unit : ''}`
+          : `${label} · Crit: ${v.toFixed(1)}h · Non-crit: ${v2.toFixed(1)}h`
         : `${label}: ${fmt(v)}${u}`,
     })
   }
@@ -247,6 +258,18 @@ function MiniBarChart({ seed, n, lo, hi, target, targets, grouped, integer, unit
     <div className="relative">
       <canvas ref={canvasRef} className="w-full block" style={{ height: 44 }}
         onMouseMove={handleMove} onMouseLeave={handleLeave} />
+      {grouped && groupLabels && (
+        <div className="flex gap-3 mt-1">
+          <span className="flex items-center gap-1 text-[10px] text-text-secondary">
+            <span className="inline-block w-2.5 h-1.5 rounded-sm bg-[#c5d5e8]" />
+            {groupLabels[0]}
+          </span>
+          <span className="flex items-center gap-1 text-[10px] text-text-secondary">
+            <span className="inline-block w-2.5 h-1.5 rounded-sm bg-[#a8bdd4]" />
+            {groupLabels[1]}
+          </span>
+        </div>
+      )}
       {tip && (
         <div className="fixed pointer-events-none z-[9999] bg-foreground text-background text-[11px] font-medium px-2 py-1 rounded shadow whitespace-nowrap"
           style={{ left: tip.x + 12, top: tip.y - 32 }}>
@@ -257,12 +280,13 @@ function MiniBarChart({ seed, n, lo, hi, target, targets, grouped, integer, unit
   )
 }
 
-function PerfCard({ title, sub, chartSub, value, unit, chartUnit, isGreen, dual, thresh, seed, n, lo, hi, target, targets, grouped, integer }: {
+function PerfCard({ title, sub, chartSub, value, unit, chartUnit, isGreen, dual, thresh, seed, n, lo, hi, target, targets, grouped, integer, d2Lo, d2Hi, d2Unit, groupLabels }: {
   title: string; sub: string; chartSub: string
   value?: number; unit?: string; chartUnit?: string; isGreen?: (v: number) => boolean
   dual?: { label: string; value: number; unit: string; isGreen?: (v: number) => boolean }[]
   thresh?: { label: string; g: boolean }[]
   seed: number; n: number; lo: number; hi: number; target?: number; targets?: { value: number; color: string }[]; grouped?: true; integer?: true
+  d2Lo?: number; d2Hi?: number; d2Unit?: string; groupLabels?: [string, string]
 }) {
   return (
     <div className="border border-border rounded-lg p-4">
@@ -285,7 +309,7 @@ function PerfCard({ title, sub, chartSub, value, unit, chartUnit, isGreen, dual,
         </div>
       )}
       <div className="text-[9px] text-text-secondary mt-2 mb-0.5">{chartSub}</div>
-      <MiniBarChart seed={seed} n={n} lo={lo} hi={hi} target={target} targets={targets} grouped={grouped} integer={integer} unit={chartUnit} />
+      <MiniBarChart seed={seed} n={n} lo={lo} hi={hi} target={target} targets={targets} grouped={grouped} integer={integer} unit={chartUnit} d2Lo={d2Lo} d2Hi={d2Hi} d2Unit={d2Unit} groupLabels={groupLabels} />
       {thresh && (
         <div className="flex gap-1 flex-wrap mt-1.5">
           {thresh.map(t => (
@@ -454,7 +478,8 @@ export default function ChargerDetailView({
                         { label: 'Energy',  value: 221,  unit: 'MWh'   },
                         { label: 'Revenue', value: 39.8, unit: 'L INR' },
                       ]}
-                      chartUnit="MWh" seed={6} n={12} lo={150} hi={290} />
+                      chartUnit="MWh" seed={6} n={12} lo={150} hi={290}
+                      d2Lo={27} d2Hi={52} d2Unit="L INR" groupLabels={['MWh', 'L INR']} grouped />
                     <PerfCard title="Charger Efficiency" sub="This month" chartSub="Monthly · last 12 months"
                       value={89} unit="%" chartUnit="%" isGreen={v => v >= 85}
                       thresh={[{label:'≥85%',g:true},{label:'<85%',g:false}]}
