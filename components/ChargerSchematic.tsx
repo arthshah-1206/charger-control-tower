@@ -214,7 +214,7 @@ const SUBSYSTEMS: SubsystemDef[] = [
 
 const CHARGER_HEALTH: Record<string, Record<string, HealthStatus>> = {
   '001': { db: 'healthy',   chiller1: 'healthy',   chiller2: 'healthy',   fluidSkid: 'healthy',   pile1: 'healthy',   pile2: 'healthy',   pile3: 'healthy',    dispenser: 'healthy',   post: 'healthy',   gun1: 'healthy',   gun2: 'healthy',   gun3: 'healthy',   grid: 'healthy'   },
-  '002': { db: 'healthy',   chiller1: 'healthy',   chiller2: 'healthy',   fluidSkid: 'healthy',   pile1: 'healthy',   pile2: 'healthy',   pile3: 'healthy',    dispenser: 'healthy',   post: 'healthy',   gun1: 'healthy',   gun2: 'healthy',   gun3: 'healthy',   grid: 'healthy'   },
+  '002': { db: 'healthy',   chiller1: 'healthy',   chiller2: 'healthy',   fluidSkid: 'healthy',   pile1: 'healthy',   pile2: 'healthy',   pile3: 'healthy',    dispenser: 'healthy',   post: 'healthy',   gun1: 'healthy',   gun2: 'healthy',   gun3: 'healthy',   grid: 'grid-down' },
   '003': { db: 'healthy',   chiller1: 'healthy',   chiller2: 'healthy',   fluidSkid: 'deration',  pile1: 'healthy',   pile2: 'healthy',   pile3: 'breakdown',  dispenser: 'healthy',   post: 'breakdown', gun1: 'healthy',   gun2: 'breakdown', gun3: 'healthy',   grid: 'healthy'   },
   '004': { db: 'healthy',   chiller1: 'healthy',   chiller2: 'deration',  fluidSkid: 'deration',  pile1: 'healthy',   pile2: 'deration',  pile3: 'healthy',    dispenser: 'deration',  post: 'healthy',   gun1: 'healthy',   gun2: 'deration',  gun3: 'healthy',   grid: 'healthy'   },
   '005': { db: 'healthy',   chiller1: 'breakdown', chiller2: 'breakdown', fluidSkid: 'breakdown', pile1: 'breakdown', pile2: 'healthy',   pile3: 'healthy',    dispenser: 'breakdown', post: 'breakdown', gun1: 'breakdown', gun2: 'healthy',   gun3: 'breakdown', grid: 'breakdown' },
@@ -502,8 +502,8 @@ export default function ChargerSchematic({ chargerNum }: { chargerNum: string })
   }, [selectedId, chargerNum])
 
   const healthMap     = CHARGER_HEALTH[chargerNum]    ?? CHARGER_HEALTH['001']
-  const dgOn          = healthMap['grid'] === 'breakdown'
-  const connectorColor = dgOn ? 'border-amber-400' : 'border-emerald-400'
+  const dgOn          = healthMap['grid'] === 'grid-down' || healthMap['grid'] === 'breakdown'
+  const connectorColor = healthMap['grid'] === 'breakdown' ? 'border-red-400' : dgOn ? 'border-amber-400' : 'border-emerald-400'
   const activeFaults  = ACTIVE_FAULTS[chargerNum]     ?? []
   const historyFaults = HISTORY_FAULTS[chargerNum]    ?? []
   const allFaults     = faultTab === 'active' ? activeFaults : historyFaults
