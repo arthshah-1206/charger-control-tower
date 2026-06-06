@@ -54,11 +54,11 @@ const INTERIOR_CAMS: CCTVCamera[] = [
 
 const BAY_CAMS: CCTVCamera[] = [
   { id: 'cam-bay-01', label: 'Bus Bay Overview', zone: 'Bus Bay', online: true,  style: { left: '1%',  top: 'calc(50% - 10px)' } },
-  { id: 'cam-bay-02', label: 'Charging Guns',    zone: 'Bus Bay', online: false, style: { left: '93%', top: 'calc(50% - 10px)' } },
+  { id: 'cam-bay-02', label: 'Charging Guns',    zone: 'Bus Bay', online: false, style: { left: '93%', top: '2px' } },
 ]
 
 const SWYD_CAM: CCTVCamera =
-  { id: 'cam-swyd', label: 'Switchyard', zone: 'Switchyard', online: true, style: { left: '3%', top: '6px' } }
+  { id: 'cam-swyd', label: 'Switchyard', zone: 'Switchyard', online: true, style: { left: '6%', top: '6px' } }
 
 // ── Subsystem layout & metrics ─────────────────────────────────────────────────
 // Positions are % of container (aspect-ratio 2.4:1).
@@ -551,7 +551,7 @@ export default function ChargerSchematic({ chargerNum }: { chargerNum: string })
           {/* Connector: from below pills (≈30px) down to schematic top edge */}
           <div
             className={`absolute border-l border-dashed pointer-events-none ${connectorColor}`}
-            style={{ left: '15.5%', top: 30, bottom: 0 }}
+            style={{ left: '15.5%', top: 30, height: 12 }}
           />
 
           {/* Charger interior */}
@@ -598,13 +598,13 @@ export default function ChargerSchematic({ chargerNum }: { chargerNum: string })
           {/* Bus Bay */}
           <div
             className="relative w-full mt-2 rounded-lg overflow-hidden border border-dashed border-neutral-300 bg-neutral-50"
-            style={{ height: 76 }}
+            style={{ height: 100 }}
           >
-            {/* Bus silhouette */}
-            <div className="absolute left-[18%] right-[18%] top-[18%] bottom-[18%] rounded-2xl bg-neutral-200/80 border border-neutral-300/60 flex items-center justify-center">
+            {/* Bus silhouette — positioned below the gun circles */}
+            <div className="absolute left-[10%] right-[10%] top-[36%] bottom-[5%] rounded-2xl bg-neutral-200/80 border border-neutral-300/60 flex items-center justify-center">
               <span className="text-[9px] font-medium text-neutral-400 uppercase tracking-wider select-none">Bus</span>
             </div>
-            {/* Gun circles */}
+            {/* Gun circles — touch top border */}
             {SUBSYSTEMS.filter(s => s.circle).map(s => {
               const health     = healthMap[s.id] ?? 'healthy'
               const isSelected = selectedId === s.id
@@ -612,7 +612,7 @@ export default function ChargerSchematic({ chargerNum }: { chargerNum: string })
                 <button
                   key={s.id}
                   onClick={() => setSelectedId(prev => prev === s.id ? null : s.id)}
-                  style={{ left: s.style?.left ?? '0', top: 'calc(50% - 10px)', width: s.style?.width ?? '4%', aspectRatio: 1 }}
+                  style={{ left: s.style?.left ?? '0', top: '2px', width: s.style?.width ?? '4%', aspectRatio: 1 }}
                   className={[
                     'absolute rounded-full border-2 flex items-center justify-center focus:outline-none',
                     'transition-all duration-150 cursor-pointer',
