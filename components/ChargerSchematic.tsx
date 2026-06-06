@@ -46,16 +46,16 @@ interface CCTVCamera {
 }
 
 const INTERIOR_CAMS: CCTVCamera[] = [
-  { id: 'cam-int-01', label: 'Interior BL', zone: 'Charger Interior', online: true,  rotation: -45,  style: { left: '1%',   bottom: '2%' } },
-  { id: 'cam-int-02', label: 'Interior BR', zone: 'Charger Interior', online: true,  rotation: -135, style: { right: '1%',  bottom: '2%' } },
-  { id: 'cam-int-03', label: 'Interior ML', zone: 'Charger Interior', online: false, rotation: 0,    style: { left: '1%',   top: '44%'   } },
-  { id: 'cam-int-04', label: 'Interior TR', zone: 'Charger Interior', online: true,  rotation: 135,  style: { right: '8%',  top: '2%'    } },
-  { id: 'cam-int-05', label: 'Interior TR', zone: 'Charger Interior', online: true,  rotation: 180,  style: { right: '1%',  top: '8%'    } },
+  { id: 'cam-int-01', label: 'Interior BL',       zone: 'Charger Interior', online: true,  rotation: 0,   style: { left: '1%',  bottom: '2%' } },
+  { id: 'cam-int-02', label: 'Interior BR',       zone: 'Charger Interior', online: true,  rotation: 180, style: { right: '1%', bottom: '2%' } },
+  { id: 'cam-int-03', label: 'Interior ML',       zone: 'Charger Interior', online: false, rotation: 0,   style: { left: '1%',  top: '44%'   } },
+  { id: 'cam-int-04', label: 'Interior TR top',   zone: 'Charger Interior', online: true,  rotation: 180, style: { right: '1%', top: '2%'    } },
+  { id: 'cam-int-05', label: 'Interior TR right', zone: 'Charger Interior', online: true,  rotation: 135, style: { right: '1%', top: '10%'   } },
 ]
 
 const BAY_CAMS: CCTVCamera[] = [
   { id: 'cam-bay-01', label: 'Bus Bay Overview', zone: 'Bus Bay', online: true,  style: { left: '1%',  top: 'calc(50% - 10px)' } },
-  { id: 'cam-bay-02', label: 'Charging Guns',    zone: 'Bus Bay', online: false, style: { left: '93%', top: '2px' } },
+  { id: 'cam-bay-02', label: 'Charging Guns',    zone: 'Bus Bay', online: false, rotation: 180, style: { left: '93%', top: '2px' } },
 ]
 
 const SWYD_CAM: CCTVCamera =
