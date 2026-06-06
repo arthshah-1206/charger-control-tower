@@ -449,12 +449,16 @@ export default function ChargerDetailView({
                       value={93.4} unit="%" chartUnit="%" isGreen={v => v >= 95}
                       thresh={[{label:'≥95%',g:true},{label:'<95%',g:false}]}
                       seed={4} n={30} lo={86} hi={99} target={95} />
-                    <PerfCard title="Energy Consumed" sub="This month" chartSub="Monthly · last 12 months"
-                      value={248} unit="MWh" chartUnit="MWh"
-                      seed={5} n={12} lo={180} hi={310} />
                     <PerfCard title="Energy Sold" sub="This month" chartSub="Monthly · last 12 months"
-                      value={221} unit="MWh" chartUnit="MWh"
-                      seed={6} n={12} lo={150} hi={290} />
+                      dual={[
+                        { label: 'Energy',  value: 221,  unit: 'MWh'   },
+                        { label: 'Revenue', value: 39.8, unit: 'L INR' },
+                      ]}
+                      chartUnit="MWh" seed={6} n={12} lo={150} hi={290} />
+                    <PerfCard title="Charger Efficiency" sub="This month" chartSub="Monthly · last 12 months"
+                      value={89} unit="%" chartUnit="%" isGreen={v => v >= 85}
+                      thresh={[{label:'≥85%',g:true},{label:'<85%',g:false}]}
+                      seed={10} n={12} lo={78} hi={96} target={85} />
                     <PerfCard title="Queue Time" sub="30-day rolling avg" chartSub="Daily · last 30 days"
                       value={8} unit="min" chartUnit="min" isGreen={v => v <= 5}
                       thresh={[{label:'≤5m',g:true},{label:'>5m',g:false}]}
