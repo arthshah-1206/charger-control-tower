@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { X, Zap, ChevronRight, Video } from 'lucide-react'
 import type { HealthStatus } from '@/lib/types'
 
@@ -472,6 +472,7 @@ export default function ChargerSchematic({ chargerNum }: { chargerNum: string })
   const [faultTab,          setFaultTab]          = useState<'active' | 'history'>('active')
   const [expandedEquipment, setExpandedEquipment] = useState<Set<string>>(new Set())
   const [feedCameraId,      setFeedCameraId]      = useState<string | null>(null)
+  const detailPanelRef = useRef<HTMLDivElement>(null)
 
   const feedCamera = [...INTERIOR_CAMS, ...BAY_CAMS, SWYD_CAM].find(c => c.id === feedCameraId) ?? null
 
@@ -499,6 +500,7 @@ export default function ChargerSchematic({ chargerNum }: { chargerNum: string })
     if (!selectedId) { setExpandedEquipment(new Set()); return }
     const tree = getFaultTree(chargerNum, selectedId)
     setExpandedEquipment(new Set(tree.filter(e => e.status !== 'healthy').map(e => e.id)))
+    setTimeout(() => detailPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
   }, [selectedId, chargerNum])
 
   const healthMap     = CHARGER_HEALTH[chargerNum]    ?? CHARGER_HEALTH['001']
@@ -642,7 +644,7 @@ export default function ChargerSchematic({ chargerNum }: { chargerNum: string })
       </div>
 
       {/* ── Subsystem detail — replaces hint when selected ── */}
-      <div className="px-5 py-4 border-b border-border bg-muted/20">
+      <div ref={detailPanelRef} className="px-5 py-4 border-b border-border bg-muted/20">
         {!selected ? (
           <p className="text-center text-xs text-text-secondary">
             Select a subsystem above to see details
