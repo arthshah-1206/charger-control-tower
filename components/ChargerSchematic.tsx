@@ -601,7 +601,7 @@ export default function ChargerSchematic({ chargerNum }: { chargerNum: string })
             style={{ height: 100 }}
           >
             {/* Bus silhouette — positioned below the gun circles */}
-            <div className="absolute left-[10%] right-[10%] top-[36%] bottom-[5%] rounded-2xl bg-neutral-200/80 border border-neutral-300/60 flex items-center justify-center">
+            <div className="absolute left-[10%] right-[10%] top-[42%] bottom-[5%] rounded-2xl bg-neutral-200/80 border border-neutral-300/60 flex items-center justify-center">
               <span className="text-[9px] font-medium text-neutral-400 uppercase tracking-wider select-none">Bus</span>
             </div>
             {/* Gun circles — touch top border */}
@@ -612,7 +612,7 @@ export default function ChargerSchematic({ chargerNum }: { chargerNum: string })
                 <button
                   key={s.id}
                   onClick={() => setSelectedId(prev => prev === s.id ? null : s.id)}
-                  style={{ left: s.style?.left ?? '0', top: '2px', width: s.style?.width ?? '4%', aspectRatio: 1 }}
+                  style={{ left: s.style?.left ?? '0', top: '2px', width: '3%', aspectRatio: 1 }}
                   className={[
                     'absolute rounded-full border-2 flex items-center justify-center focus:outline-none',
                     'transition-all duration-150 cursor-pointer',
