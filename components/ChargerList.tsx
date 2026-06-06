@@ -33,7 +33,7 @@ export default function ChargerList({ chargers }: { chargers: Charger[] }) {
                   </div>
                   <div className="text-[11px] text-text-secondary truncate">{c.site} · {c.corridor}</div>
                 </div>
-                <div className="flex items-center"><HealthPill status={c.health} /></div>
+                <div className="flex items-center"><HealthPill status={c.health} derationPct={c.derationPct} /></div>
                 <div className="flex items-center"><StatePill state={c.state} /></div>
                 <div className="flex items-center"><FreshnessTag mins={c.freshMins} /></div>
               </Link>

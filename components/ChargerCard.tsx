@@ -37,7 +37,7 @@ export default function ChargerCard({
           </div>
           <div className="text-xs text-text-secondary mt-0.5">{c.site} · {c.corridor}</div>
         </div>
-        <HealthPill status={c.health} />
+        <HealthPill status={c.health} derationPct={c.derationPct} />
       </div>
       <div className="mt-3 flex items-center gap-3">
         <StatePill state={c.state} />

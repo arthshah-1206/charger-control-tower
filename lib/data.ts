@@ -3,7 +3,7 @@ import type { Charger, ChargerNotification } from './types'
 export const CHARGERS: Charger[] = [
   { prefix: 'EXP-C-', num: '003', site: 'Undavelly',  corridor: 'BLR–HYD', health: 'breakdown', state: 'idle',     freshMins: 48,  lat: 16.435, lng: 80.495 },
   { prefix: 'EXP-C-', num: '005', site: 'CK Palli',   corridor: 'BLR–HYD', health: 'breakdown', state: 'idle',     freshMins: 127, lat: 14.730, lng: 77.985 },
-  { prefix: 'EXP-C-', num: '004', site: 'CK Palli',   corridor: 'BLR–HYD', health: 'deration',  state: 'charging', freshMins: 1,   lat: 14.722, lng: 77.977 },
+  { prefix: 'EXP-C-', num: '004', site: 'CK Palli',   corridor: 'BLR–HYD', health: 'deration',  state: 'charging', freshMins: 1,   lat: 14.722, lng: 77.977, derationPct: 65 },
   { prefix: 'EXP-C-', num: '001', site: 'Penukonda',  corridor: 'BLR–HYD', health: 'healthy',   state: 'charging', freshMins: 0,   lat: 14.083, lng: 77.598 },
   { prefix: 'EXP-C-', num: '002', site: 'Penukonda',  corridor: 'BLR–HYD', health: 'grid-down', state: 'idle',     freshMins: 3,   lat: 14.089, lng: 77.606 },
   { prefix: 'EXP-C-', num: '006', site: 'Coimbatore', corridor: 'BLR–CBE', health: 'healthy',   state: 'idle',     freshMins: 5,   lat: 11.017, lng: 76.955 },

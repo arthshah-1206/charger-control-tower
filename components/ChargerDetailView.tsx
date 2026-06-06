@@ -419,7 +419,7 @@ export default function ChargerDetailView({
               <div className="bg-background border border-border rounded-lg overflow-hidden">
                 <div className="px-5 py-4 border-b border-border flex items-center gap-2.5">
                   <span className="text-sm font-semibold">Charger health</span>
-                  <HealthPill status={charger.health} />
+                  <HealthPill status={charger.health} derationPct={charger.derationPct} />
                 </div>
                 <ChargerSchematic chargerNum={charger.num} />
               </div>
@@ -480,8 +480,11 @@ export default function ChargerDetailView({
             {/* ── Service history ── */}
             <section id="sec-svc" style={SCROLL_MARGIN}>
               <div className="bg-background border border-border rounded-lg overflow-hidden">
-                <div className="px-5 py-4 border-b border-border">
+                <div className="px-5 py-4 border-b border-border flex items-center justify-between">
                   <span className="text-sm font-semibold">Service history</span>
+                  <span className="text-xs text-text-secondary">
+                    Next service due in <span className="font-semibold text-foreground">42 days</span>
+                  </span>
                 </div>
                 <div className="px-5 py-4">
                   <table className="w-full border-collapse">

@@ -19,4 +19,5 @@ export interface Charger {
   freshMins: number
   lat: number
   lng: number
+  derationPct?: number  // % of rated capacity still available; only set when health === 'deration'
 }
