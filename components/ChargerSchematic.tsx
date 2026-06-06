@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, Zap, ChevronRight } from 'lucide-react'
+import { X, Zap, ChevronRight, Video } from 'lucide-react'
 import type { HealthStatus } from '@/lib/types'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -33,6 +33,32 @@ interface ChargerFault {
   ticketId: string
   reportedAt: string
 }
+
+// ── CCTV cameras ───────────────────────────────────────────────────────────────
+
+interface CCTVCamera {
+  id: string
+  label: string
+  zone: string
+  online: boolean
+  style: { left: string; top?: string; right?: string; bottom?: string }
+}
+
+const INTERIOR_CAMS: CCTVCamera[] = [
+  { id: 'cam-int-01', label: 'Interior NW',     zone: 'Charger Interior', online: true,  style: { left: '1%',  top: '2%'  } },
+  { id: 'cam-int-02', label: 'Interior SW',     zone: 'Charger Interior', online: true,  style: { left: '1%',  top: '78%' } },
+  { id: 'cam-int-03', label: 'Interior Center', zone: 'Charger Interior', online: false, style: { left: '27%', top: '2%'  } },
+  { id: 'cam-int-04', label: 'Interior NE',     zone: 'Charger Interior', online: true,  style: { left: '84%', top: '2%'  } },
+  { id: 'cam-int-05', label: 'Interior SE',     zone: 'Charger Interior', online: true,  style: { left: '84%', top: '64%' } },
+]
+
+const BAY_CAMS: CCTVCamera[] = [
+  { id: 'cam-bay-01', label: 'Bus Bay Overview', zone: 'Bus Bay', online: true,  style: { left: '12%', top: '22%' } },
+  { id: 'cam-bay-02', label: 'Charging Guns',    zone: 'Bus Bay', online: false, style: { left: '78%', top: '22%' } },
+]
+
+const SWYD_CAM: CCTVCamera =
+  { id: 'cam-swyd', label: 'Switchyard', zone: 'Switchyard', online: true, style: { left: '30%', top: '6px' } }
 
 // ── Subsystem layout & metrics ─────────────────────────────────────────────────
 // Positions are % of container (aspect-ratio 2.4:1).
@@ -444,6 +470,24 @@ export default function ChargerSchematic({ chargerNum }: { chargerNum: string })
   const [selectedId,        setSelectedId]        = useState<string | null>(null)
   const [faultTab,          setFaultTab]          = useState<'active' | 'history'>('active')
   const [expandedEquipment, setExpandedEquipment] = useState<Set<string>>(new Set())
+  const [feedCameraId,      setFeedCameraId]      = useState<string | null>(null)
+
+  const feedCamera = [...INTERIOR_CAMS, ...BAY_CAMS, SWYD_CAM].find(c => c.id === feedCameraId) ?? null
+
+  const renderCamPin = (cam: CCTVCamera) => (
+    <button
+      key={cam.id}
+      onClick={(e) => { e.stopPropagation(); setFeedCameraId(cam.id) }}
+      title={`${cam.label} · ${cam.online ? 'Online' : 'Offline'}`}
+      style={cam.style}
+      className="absolute z-20 cursor-pointer group"
+    >
+      <div className={`relative flex items-center justify-center w-5 h-5 rounded-md transition-all group-hover:scale-125 ${cam.online ? 'bg-emerald-500/15 hover:bg-emerald-500/25' : 'bg-red-500/15 hover:bg-red-500/25'}`}>
+        <Video size={10} className={cam.online ? 'text-emerald-600' : 'text-red-500'} strokeWidth={2.5} />
+        <span className={`absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full border border-white ${cam.online ? 'bg-emerald-500' : 'bg-red-500'}`} />
+      </div>
+    </button>
+  )
 
   useEffect(() => {
     if (!selectedId) { setExpandedEquipment(new Set()); return }
@@ -500,6 +544,9 @@ export default function ChargerSchematic({ chargerNum }: { chargerNum: string })
               <span className="text-[8px] font-normal">{dgOn ? 'On' : 'Off'}</span>
             </div>
           </div>
+
+          {/* Switchyard camera pin */}
+          {renderCamPin(SWYD_CAM)}
 
           {/* Connector: from below pills (≈30px) down to schematic top edge */}
           <div
@@ -568,6 +615,23 @@ export default function ChargerSchematic({ chargerNum }: { chargerNum: string })
                 </button>
               )
             })}
+
+            {/* CCTV camera pins — interior */}
+            {INTERIOR_CAMS.map(renderCamPin)}
+          </div>
+
+          {/* Bus Bay */}
+          <div
+            className="relative w-full mt-2 rounded-lg overflow-hidden border border-dashed border-neutral-300 bg-neutral-50"
+            style={{ height: 76 }}
+          >
+            <span className="absolute top-1.5 left-2.5 text-[9px] font-semibold uppercase tracking-wider text-neutral-300 select-none">Bus Bay</span>
+            {/* Bus silhouette */}
+            <div className="absolute left-[18%] right-[18%] top-[18%] bottom-[18%] rounded-2xl bg-neutral-200/80 border border-neutral-300/60 flex items-center justify-center">
+              <span className="text-[9px] font-medium text-neutral-400 uppercase tracking-wider select-none">Bus</span>
+            </div>
+            {/* CCTV camera pins — bus bay */}
+            {BAY_CAMS.map(renderCamPin)}
           </div>
         </div>
 
@@ -635,6 +699,64 @@ export default function ChargerSchematic({ chargerNum }: { chargerNum: string })
         )}
       </div>
 
+      {/* ── Camera feed modal ── */}
+      {feedCamera && (
+        <div
+          className="fixed inset-0 z-[500] flex items-center justify-center bg-black/60"
+          onClick={() => setFeedCameraId(null)}
+        >
+          <div
+            className="bg-background rounded-xl overflow-hidden shadow-2xl w-[400px]"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+              <div className="flex items-center gap-2">
+                <Video size={14} className="text-text-secondary" />
+                <span className="text-sm font-semibold">{feedCamera.label}</span>
+                <span className="text-[11px] text-text-secondary">· {feedCamera.zone}</span>
+              </div>
+              <button
+                onClick={() => setFeedCameraId(null)}
+                className="p-1 rounded text-text-secondary hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <div className="relative bg-neutral-900 aspect-video flex items-center justify-center">
+              {feedCamera.online ? (
+                <>
+                  <div
+                    className="absolute inset-0 opacity-[0.04]"
+                    style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.5) 2px, rgba(255,255,255,0.5) 4px)' }}
+                  />
+                  <span className="text-neutral-600 text-sm">Live feed not available in demo</span>
+                  <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                    LIVE
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col items-center gap-2">
+                  <Video size={28} className="text-neutral-600" strokeWidth={1.5} />
+                  <span className="text-neutral-500 text-sm">Camera offline</span>
+                </div>
+              )}
+            </div>
+
+            <div className="px-4 py-2.5 border-t border-border flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <span className={`w-2 h-2 rounded-full ${feedCamera.online ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                <span className={`text-xs font-medium ${feedCamera.online ? 'text-emerald-600' : 'text-red-500'}`}>
+                  {feedCamera.online ? 'Online' : 'Offline'}
+                </span>
+              </div>
+              <span className="text-xs text-text-secondary font-mono">{feedCamera.id.toUpperCase()}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Fault codes ── */}
       <div className="px-5 py-4">
         <div className="flex items-center justify-between mb-3">
@@ -645,10 +767,10 @@ export default function ChargerSchematic({ chargerNum }: { chargerNum: string })
             {selected && (
               <button
                 onClick={() => setSelectedId(null)}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-foreground/8 text-foreground hover:bg-foreground/12 transition-colors"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-normal bg-neutral-100 text-neutral-600 border border-neutral-200 hover:bg-neutral-200 transition-colors cursor-pointer"
               >
                 {selected.label}
-                <X size={9} />
+                <X size={11} />
               </button>
             )}
           </div>
@@ -675,7 +797,7 @@ export default function ChargerSchematic({ chargerNum }: { chargerNum: string })
 
         {visibleFaults.length === 0 ? (
           <div className="py-8 text-center text-xs text-text-secondary border border-border rounded-lg">
-            No faults
+            No {faultTab === 'active' ? 'active' : 'historic'} fault codes{selected ? ` for ${selected.label}` : ''}
           </div>
         ) : (
           <div className="border border-border rounded-lg overflow-hidden">
