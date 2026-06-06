@@ -53,12 +53,12 @@ const INTERIOR_CAMS: CCTVCamera[] = [
 ]
 
 const BAY_CAMS: CCTVCamera[] = [
-  { id: 'cam-bay-01', label: 'Bus Bay Overview', zone: 'Bus Bay', online: true,  style: { left: '12%', top: '22%' } },
-  { id: 'cam-bay-02', label: 'Charging Guns',    zone: 'Bus Bay', online: false, style: { left: '78%', top: '22%' } },
+  { id: 'cam-bay-01', label: 'Bus Bay Overview', zone: 'Bus Bay', online: true,  style: { left: '1%',  top: 'calc(50% - 10px)' } },
+  { id: 'cam-bay-02', label: 'Charging Guns',    zone: 'Bus Bay', online: false, style: { left: '93%', top: 'calc(50% - 10px)' } },
 ]
 
 const SWYD_CAM: CCTVCamera =
-  { id: 'cam-swyd', label: 'Switchyard', zone: 'Switchyard', online: true, style: { left: '30%', top: '6px' } }
+  { id: 'cam-swyd', label: 'Switchyard', zone: 'Switchyard', online: true, style: { left: '3%', top: '6px' } }
 
 // ── Subsystem layout & metrics ─────────────────────────────────────────────────
 // Positions are % of container (aspect-ratio 2.4:1).
@@ -152,7 +152,7 @@ const SUBSYSTEMS: SubsystemDef[] = [
   },
   {
     id: 'post', label: 'Post', schematicLabel: 'Post',
-    style: { left: '65%', top: '76%', width: '27%', height: '13%' },
+    style: { left: '65%', bottom: '2%', width: '27%', height: '14%' },
     metrics: [
       { label: 'Charging Guns', value: '—', tbd: true           },
       { label: 'Fluid Guns',    value: '—', tbd: true           },
@@ -591,7 +591,20 @@ export default function ChargerSchematic({ chargerNum }: { chargerNum: string })
               )
             })}
 
-            {/* Gun circles — below Post, clickable with RAG status */}
+            {/* CCTV camera pins — interior */}
+            {INTERIOR_CAMS.map(renderCamPin)}
+          </div>
+
+          {/* Bus Bay */}
+          <div
+            className="relative w-full mt-2 rounded-lg overflow-hidden border border-dashed border-neutral-300 bg-neutral-50"
+            style={{ height: 76 }}
+          >
+            {/* Bus silhouette */}
+            <div className="absolute left-[18%] right-[18%] top-[18%] bottom-[18%] rounded-2xl bg-neutral-200/80 border border-neutral-300/60 flex items-center justify-center">
+              <span className="text-[9px] font-medium text-neutral-400 uppercase tracking-wider select-none">Bus</span>
+            </div>
+            {/* Gun circles */}
             {SUBSYSTEMS.filter(s => s.circle).map(s => {
               const health     = healthMap[s.id] ?? 'healthy'
               const isSelected = selectedId === s.id
@@ -599,7 +612,7 @@ export default function ChargerSchematic({ chargerNum }: { chargerNum: string })
                 <button
                   key={s.id}
                   onClick={() => setSelectedId(prev => prev === s.id ? null : s.id)}
-                  style={{ ...s.style, bottom: '1%', aspectRatio: '1' }}
+                  style={{ left: s.style?.left ?? '0', top: 'calc(50% - 10px)', width: s.style?.width ?? '4%', aspectRatio: 1 }}
                   className={[
                     'absolute rounded-full border-2 flex items-center justify-center focus:outline-none',
                     'transition-all duration-150 cursor-pointer',
@@ -615,21 +628,6 @@ export default function ChargerSchematic({ chargerNum }: { chargerNum: string })
                 </button>
               )
             })}
-
-            {/* CCTV camera pins — interior */}
-            {INTERIOR_CAMS.map(renderCamPin)}
-          </div>
-
-          {/* Bus Bay */}
-          <div
-            className="relative w-full mt-2 rounded-lg overflow-hidden border border-dashed border-neutral-300 bg-neutral-50"
-            style={{ height: 76 }}
-          >
-            <span className="absolute top-1.5 left-2.5 text-[9px] font-semibold uppercase tracking-wider text-neutral-300 select-none">Bus Bay</span>
-            {/* Bus silhouette */}
-            <div className="absolute left-[18%] right-[18%] top-[18%] bottom-[18%] rounded-2xl bg-neutral-200/80 border border-neutral-300/60 flex items-center justify-center">
-              <span className="text-[9px] font-medium text-neutral-400 uppercase tracking-wider select-none">Bus</span>
-            </div>
             {/* CCTV camera pins — bus bay */}
             {BAY_CAMS.map(renderCamPin)}
           </div>
@@ -712,8 +710,7 @@ export default function ChargerSchematic({ chargerNum }: { chargerNum: string })
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
               <div className="flex items-center gap-2">
                 <Video size={14} className="text-text-secondary" />
-                <span className="text-sm font-semibold">{feedCamera.label}</span>
-                <span className="text-[11px] text-text-secondary">· {feedCamera.zone}</span>
+                <span className="text-sm font-semibold">{feedCamera.zone}</span>
               </div>
               <button
                 onClick={() => setFeedCameraId(null)}
