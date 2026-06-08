@@ -845,7 +845,7 @@ export default function ChargerSchematic({ chargerNum }: { chargerNum: string })
                     {feedCamera.online ? 'Online' : 'Offline'}
                   </span>
                 </div>
-                <span className="text-xs text-text-secondary font-mono">{feedCamera.id.toUpperCase()}</span>
+                <span className="text-xs text-text-secondary">{feedCamera.id.toUpperCase()}</span>
                 <button
                   onClick={() => setFeedCameraId(null)}
                   className="p-1 rounded text-text-secondary hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
