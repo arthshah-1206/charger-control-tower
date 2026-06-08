@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import Link from 'next/link'
-import { ChevronLeft, ChevronRight, MapPin } from 'lucide-react'
+import { MapPin } from 'lucide-react'
 import type { Charger } from '@/lib/types'
 import { CHARGER_NOTIFICATIONS, CHARGER_DETAIL_DATA } from '@/lib/data'
 import ChargerDetailSidebar from './ChargerDetailSidebar'
@@ -20,7 +19,7 @@ function tickLabel(frac: number) {
   return `−${Math.round((1 - frac) * WINDOW_HOURS)}h`
 }
 
-function TimeScrubber({ chargerNum }: { chargerNum: string }) {
+function TimeScrubber({ chargerNum, wrapperClassName }: { chargerNum: string; wrapperClassName?: string }) {
   const [pos, setPos] = useState(1)
   const trackRef = useRef<HTMLDivElement>(null)
   const isLive = pos > 0.995
@@ -51,24 +50,7 @@ function TimeScrubber({ chargerNum }: { chargerNum: string }) {
   }
 
   return (
-    <div className="shrink-0 flex items-center gap-5 px-6 border-b border-border bg-background select-none" style={{ height: 52 }}>
-      <div className="w-32 shrink-0 flex items-center gap-2">
-        {isLive ? (
-          <>
-            <span className="relative flex w-2 h-2 shrink-0">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex w-2 h-2 rounded-full bg-emerald-500" />
-            </span>
-            <span className="text-[11px] font-semibold text-emerald-700 tracking-wider">LIVE</span>
-          </>
-        ) : (
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
-            <span className="text-[11px] font-semibold text-foreground">Historical</span>
-          </div>
-        )}
-      </div>
-
+    <div className={wrapperClassName ?? 'shrink-0 flex items-center gap-5 px-6 border-b border-border bg-background select-none'} style={wrapperClassName ? undefined : { height: 52 }}>
       <div className="flex-1 flex flex-col justify-center gap-1.5">
         <div
           ref={trackRef}
@@ -108,16 +90,22 @@ function TimeScrubber({ chargerNum }: { chargerNum: string }) {
         </div>
       </div>
 
-      <div className="w-24 shrink-0 flex justify-end">
-        {!isLive ? (
+      <div className="w-24 shrink-0 flex items-center justify-end">
+        {isLive ? (
+          <div className="flex items-center gap-1.5">
+            <span className="relative flex w-2 h-2 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex w-2 h-2 rounded-full bg-emerald-500" />
+            </span>
+            <span className="text-[11px] font-semibold text-emerald-700 tracking-wider">LIVE</span>
+          </div>
+        ) : (
           <button
             onClick={() => setPos(1)}
             className="text-[10px] font-semibold text-text-secondary hover:text-foreground border border-border rounded-md px-2.5 py-1 transition-colors hover:bg-muted"
           >
             Jump to live
           </button>
-        ) : (
-          <span className="text-[10px] text-text-secondary">Last 24h</span>
         )}
       </div>
     </div>
@@ -138,7 +126,7 @@ function getBarLabel(idx: number, n: number): string {
 
 function perfColor(val: number, isGreen?: (v: number) => boolean): string | undefined {
   if (!isGreen) return undefined
-  return isGreen(val) ? '#1a7a40' : '#b91c1c'
+  return isGreen(val) ? '#059669' : '#dc2626'
 }
 
 function MiniBarChart({ seed, n, lo, hi, target, targets, grouped, integer, unit, d2Lo, d2Hi, d2Unit, groupLabels }: {
@@ -326,16 +314,12 @@ function PerfCard({ title, sub, chartSub, value, unit, chartUnit, isGreen, dual,
 // ─── Main view ─────────────────────────────────────────────────────────────────
 
 const SECTION_IDS = ['sec-info', 'sec-health', 'sec-perf', 'sec-svc']
-const SCROLL_MARGIN = { scrollMarginTop: 108 }
+const SCROLL_MARGIN = { scrollMarginTop: 72 }
 
 export default function ChargerDetailView({
   charger,
-  prev,
-  next,
 }: {
   charger: Charger
-  prev: Charger | null
-  next: Charger | null
 }) {
   const [activeSection, setActiveSection] = useState('sec-info')
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -347,7 +331,7 @@ export default function ChargerDetailView({
       let active = SECTION_IDS[0]
       for (const id of SECTION_IDS) {
         const sec = document.getElementById(id)
-        if (sec && sec.getBoundingClientRect().top < 120) active = id
+        if (sec && sec.getBoundingClientRect().top < 80) active = id
       }
       setActiveSection(active)
     }
@@ -363,32 +347,19 @@ export default function ChargerDetailView({
 
       <div className="flex-1 flex flex-col overflow-hidden">
 
-        {/* Top bar */}
-        <div className="shrink-0 h-12 flex items-center px-6 border-b border-border bg-background">
-          <div className="ml-auto flex items-center gap-1">
-            {prev && (
-              <Link
-                href={`/charger/${prev.num}`}
-                className="inline-flex items-center gap-1 h-8 px-3 text-xs font-medium border border-border rounded-lg text-text-secondary hover:text-foreground hover:bg-muted transition-colors"
-              >
-                <ChevronLeft size={12} />
-                Prev
-              </Link>
-            )}
-            {next && (
-              <Link
-                href={`/charger/${next.num}`}
-                className="inline-flex items-center gap-1 h-8 px-3 text-xs font-medium border border-border rounded-lg text-text-secondary hover:text-foreground hover:bg-muted transition-colors"
-              >
-                Next
-                <ChevronRight size={12} />
-              </Link>
-            )}
-          </div>
+        {/* Single-row header */}
+        <div className="shrink-0 flex items-center gap-4 px-6 border-b border-border bg-background select-none" style={{ height: 60 }}>
+          <h1 className="text-xl font-light tracking-wide shrink-0">
+            <span className="text-text-secondary">{charger.prefix}</span><strong className="font-bold">{charger.num}</strong>
+          </h1>
+          <HealthPill status={charger.health} derationPct={charger.derationPct} />
+          <StatePill state={charger.state} />
+          <FreshnessTag mins={charger.freshMins} />
+          <TimeScrubber
+            chargerNum={charger.num}
+            wrapperClassName="ml-auto flex items-center gap-3 w-96 mr-1"
+          />
         </div>
-
-        {/* Timeline */}
-        <TimeScrubber chargerNum={charger.num} />
 
         {/* Scrollable content */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto custom-scrollbar bg-muted/30">
@@ -397,27 +368,10 @@ export default function ChargerDetailView({
             {/* ── Charger info ── */}
             <section id="sec-info" style={SCROLL_MARGIN}>
               <div className="bg-background border border-border rounded-lg overflow-hidden">
-                {/* Header row */}
-                <div className="px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
-                  <h1 className="text-lg font-medium tracking-wide">
-                    {charger.prefix}<strong className="font-bold">{charger.num}</strong>
-                  </h1>
-                  <div className="flex items-center gap-2">
-                    <a
-                      href={`https://maps.google.com/?q=${charger.lat},${charger.lng}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 h-8 px-2.5 text-xs border border-border rounded-lg text-text-secondary hover:text-foreground hover:bg-muted transition-colors"
-                    >
-                      <MapPin size={12} />
-                      Location
-                    </a>
-                    <FreshnessTag mins={charger.freshMins} />
-                    <StatePill state={charger.state} />
-                  </div>
+                <div className="px-5 py-4 border-b border-border">
+                  <span className="text-sm font-semibold">Charger info</span>
                 </div>
-                {/* Profile grid */}
-                <div className="border-t border-border px-5 py-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-6 gap-y-3.5">
+                <div className="px-5 py-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-6 gap-y-3.5">
                   {[
                     { label: 'Operator',     value: detail?.operator     ?? '—' },
                     { label: 'AMC Type',     value: detail?.amcType      ?? '—' },
@@ -434,6 +388,18 @@ export default function ChargerDetailView({
                       <span className="text-xs font-medium text-foreground truncate">{value}</span>
                     </div>
                   ))}
+                  <div className="flex flex-col gap-0.5 min-w-0">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">Location</span>
+                    <a
+                      href={`https://maps.google.com/?q=${charger.lat},${charger.lng}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-medium text-foreground hover:underline"
+                    >
+                      <MapPin size={11} className="shrink-0 text-text-secondary" />
+                      {charger.lat.toFixed(4)}, {charger.lng.toFixed(4)}
+                    </a>
+                  </div>
                 </div>
               </div>
             </section>
@@ -441,9 +407,8 @@ export default function ChargerDetailView({
             {/* ── Charger health ── */}
             <section id="sec-health" style={SCROLL_MARGIN}>
               <div className="bg-background border border-border rounded-lg overflow-hidden">
-                <div className="px-5 py-4 border-b border-border flex items-center gap-2.5">
+                <div className="px-5 py-4 border-b border-border">
                   <span className="text-sm font-semibold">Charger health</span>
-                  <HealthPill status={charger.health} derationPct={charger.derationPct} />
                 </div>
                 <ChargerSchematic chargerNum={charger.num} />
               </div>

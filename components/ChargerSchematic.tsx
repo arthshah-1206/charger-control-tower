@@ -259,10 +259,10 @@ const HISTORY_FAULTS: Record<string, ChargerFault[]> = {
 // ── Visual style maps ──────────────────────────────────────────────────────────
 
 const HEALTH_BG: Record<HealthStatus, string> = {
-  healthy:    'bg-emerald-100 border-emerald-300',
-  deration:   'bg-amber-100  border-amber-300',
-  breakdown:  'bg-red-100    border-red-300',
-  'grid-down': 'bg-sky-100   border-sky-300',
+  healthy:    'bg-emerald-200 border-emerald-400',
+  deration:   'bg-amber-100   border-amber-400',
+  breakdown:  'bg-red-100     border-red-400',
+  'grid-down': 'bg-sky-100    border-sky-400',
 }
 const HEALTH_TEXT: Record<HealthStatus, string> = {
   healthy:    'text-emerald-900',
@@ -272,7 +272,7 @@ const HEALTH_TEXT: Record<HealthStatus, string> = {
 }
 const HEALTH_DOT: Record<HealthStatus, string> = {
   healthy:    'bg-emerald-500',
-  deration:   'bg-amber-400',
+  deration:   'bg-amber-500',
   breakdown:  'bg-red-500',
   'grid-down': 'bg-sky-500',
 }
@@ -457,10 +457,10 @@ function getFaultTree(chargerNum: string, subsystemId: string): FaultEquipment[]
 }
 
 const HEALTH_PILL_CLS: Record<HealthStatus, string> = {
-  healthy:    'bg-emerald-100 text-emerald-700',
-  deration:   'bg-amber-100   text-amber-700',
-  breakdown:  'bg-red-100     text-red-700',
-  'grid-down': 'bg-sky-100    text-sky-700',
+  healthy:    'bg-emerald-50 text-emerald-700',
+  deration:   'bg-amber-50   text-amber-700',
+  breakdown:  'bg-red-50     text-red-700',
+  'grid-down': 'bg-sky-50    text-sky-700',
 }
 const HEALTH_LABEL: Record<HealthStatus, string> = {
   healthy: 'Healthy', deration: 'Deration', breakdown: 'Breakdown', 'grid-down': 'On DG',
@@ -484,7 +484,7 @@ function CameraTimeline({ chargerNum }: { chargerNum: string }) {
   const markers = notifications.map((n, i) => ({
     frac: 0.28 + i * 0.23,
     label: `${n.from} → ${n.to}`,
-    color: n.to === 'breakdown' ? 'bg-red-500' : 'bg-amber-400',
+    color: n.to === 'breakdown' ? 'bg-red-500' : 'bg-amber-500',
   }))
 
   const computePos = useCallback((clientX: number) => {

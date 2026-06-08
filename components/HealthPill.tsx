@@ -2,7 +2,7 @@ import type { HealthStatus } from '@/lib/types'
 
 const CONFIG: Record<HealthStatus, { label: string; className: string; dot: string }> = {
   healthy:    { label: 'Healthy',   className: 'bg-emerald-50 text-emerald-700', dot: 'bg-emerald-500' },
-  deration:   { label: 'Deration',  className: 'bg-amber-50 text-amber-700',     dot: 'bg-amber-400'   },
+  deration:   { label: 'Deration',  className: 'bg-amber-50 text-amber-700',     dot: 'bg-amber-500'   },
   breakdown:  { label: 'Breakdown', className: 'bg-red-50 text-red-700',         dot: 'bg-red-500'     },
   'grid-down': { label: 'On DG',   className: 'bg-sky-50 text-sky-700',         dot: 'bg-sky-500'     },
 }

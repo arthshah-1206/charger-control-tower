@@ -10,8 +10,8 @@ function label(mins: number): string {
 
 function color(mins: number): string {
   if (mins <= 5)  return 'text-emerald-600'
-  if (mins <= 15) return 'text-amber-500'
-  return 'text-red-500'
+  if (mins <= 15) return 'text-amber-600'
+  return 'text-red-600'
 }
 
 export default function FreshnessTag({ mins }: { mins: number }) {
