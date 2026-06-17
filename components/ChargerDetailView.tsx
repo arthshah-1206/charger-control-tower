@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { MapPin } from 'lucide-react'
+import { MapPin, Lock, Video } from 'lucide-react'
 import type { Charger } from '@/lib/types'
-import { CHARGER_NOTIFICATIONS, CHARGER_DETAIL_DATA } from '@/lib/data'
+import { CHARGER_NOTIFICATIONS, CHARGER_DETAIL_DATA, LIVE_SESSIONS, CHARGER_SESSIONS } from '@/lib/data'
 import ChargerDetailSidebar from './ChargerDetailSidebar'
 import ChargerSchematic from './ChargerSchematic'
 import HealthPill from './HealthPill'
@@ -112,6 +112,47 @@ function TimeScrubber({ chargerNum, wrapperClassName }: { chargerNum: string; wr
   )
 }
 
+// ─── SOC Gauge ────────────────────────────────────────────────────────────────
+
+function SocGauge({ current, className }: { current: number; className?: string }) {
+  // Semicircle: 180° (left) → CW through 270° (top) → 0° (right), sweep=1
+  const cx = 50, cy = 48, r = 40
+  const toRad = (deg: number) => deg * Math.PI / 180
+  const pt = (deg: number): [number, number] => [cx + r * Math.cos(toRad(deg)), cy + r * Math.sin(toRad(deg))]
+
+  const [sx, sy] = pt(180)  // left
+  const [ex, ey] = pt(0)    // right
+  const trackPath = `M ${sx.toFixed(1)} ${sy.toFixed(1)} A ${r} ${r} 0 0 1 ${ex.toFixed(1)} ${ey.toFixed(1)}`
+
+  const clamped = Math.min(Math.max(current, 0), 99.99)
+  const fillAngle = 180 + (clamped / 100) * 180
+  const [fx, fy] = pt(fillAngle)
+  const fillPath = `M ${sx.toFixed(1)} ${sy.toFixed(1)} A ${r} ${r} 0 0 1 ${fx.toFixed(1)} ${fy.toFixed(1)}`
+
+  return (
+    <svg viewBox="0 0 100 60" className={className ?? 'w-20 h-auto shrink-0'} style={{ overflow: 'visible' }}>
+      <defs>
+        <linearGradient id="soc-grad" x1={sx.toFixed(1)} y1="0" x2={ex.toFixed(1)} y2="0" gradientUnits="userSpaceOnUse">
+          <stop offset="0%"   stopColor="#ef4444" />
+          <stop offset="35%"  stopColor="#f97316" />
+          <stop offset="65%"  stopColor="#eab308" />
+          <stop offset="100%" stopColor="#22c55e" />
+        </linearGradient>
+      </defs>
+      <path d={trackPath} fill="none" stroke="#e5e7eb" strokeWidth="7" strokeLinecap="round" />
+      {current > 0 && (
+        <path d={fillPath} fill="none" stroke="url(#soc-grad)" strokeWidth="7" strokeLinecap="round" />
+      )}
+      <text x="50" y="45" textAnchor="middle" fontSize="22" fontWeight="700" fontFamily="inherit" fill="currentColor">
+        {current}<tspan fontSize="12" fontWeight="600">%</tspan>
+      </text>
+      <text x="50" y="57" textAnchor="middle" fontSize="8" fontFamily="inherit" fill="#9ca3af">
+        SOC
+      </text>
+    </svg>
+  )
+}
+
 // ─── Performance ──────────────────────────────────────────────────────────────
 
 function getBarLabel(idx: number, n: number): string {
@@ -119,6 +160,11 @@ function getBarLabel(idx: number, n: number): string {
   if (n === 12) {
     const d = new Date(now.getFullYear(), now.getMonth() - (n - 1 - idx), 1)
     return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
+  }
+  if (n <= 6) {
+    const weeksAgo = n - 1 - idx
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - weeksAgo * 7)
+    return 'Wk ' + d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }
   const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (n - 1 - idx))
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -129,9 +175,9 @@ function perfColor(val: number, isGreen?: (v: number) => boolean): string | unde
   return isGreen(val) ? '#059669' : '#dc2626'
 }
 
-function MiniBarChart({ seed, n, lo, hi, target, targets, grouped, integer, unit, d2Lo, d2Hi, d2Unit, groupLabels }: {
-  seed: number; n: number; lo: number; hi: number; target?: number; targets?: { value: number; color: string }[]; grouped?: true; integer?: true; unit?: string
-  d2Lo?: number; d2Hi?: number; d2Unit?: string; groupLabels?: [string, string]
+function MiniBarChart({ seed, n, lo, hi, target, targets, grouped, stacked, integer, unit, d2Lo, d2Hi, d2Unit, d3Lo, d3Hi, groupLabels }: {
+  seed: number; n: number; lo: number; hi: number; target?: number; targets?: { value: number; color: string }[]; grouped?: true; stacked?: true; integer?: true; unit?: string
+  d2Lo?: number; d2Hi?: number; d2Unit?: string; d3Lo?: number; d3Hi?: number; groupLabels?: string[]
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const hovRef    = useRef<number | null>(null)
@@ -141,12 +187,16 @@ function MiniBarChart({ seed, n, lo, hi, target, targets, grouped, integer, unit
     const v = lo + Math.abs(Math.sin(s * 127.1 + i * 311.7)) * (hi - lo)
     return integer ? Math.round(v) : v
   })
-  // separate generator for d2 when it has its own value range
   const mk2 = (d2Lo != null && d2Hi != null)
     ? (s: number) => Array.from({ length: n }, (_, i) =>
         d2Lo + Math.abs(Math.sin(s * 127.1 + i * 311.7)) * (d2Hi - d2Lo)
       )
     : mk
+  const mk3 = (d3Lo != null && d3Hi != null)
+    ? (s: number) => Array.from({ length: n }, (_, i) =>
+        d3Lo + Math.abs(Math.sin(s * 127.1 + i * 311.7)) * (d3Hi - d3Lo)
+      )
+    : null
 
   function paint(hov: number | null) {
     const el = canvasRef.current
@@ -158,10 +208,13 @@ function MiniBarChart({ seed, n, lo, hi, target, targets, grouped, integer, unit
     const ctx = el.getContext('2d')
     if (!ctx) return
     ctx.scale(dpr, dpr)
-    const d1 = mk(seed), d2 = grouped ? mk2(seed + 50) : []
-    // normalize each series independently so neither dwarfs the other
-    const mx1 = Math.max(...d1, target ?? 0, ...(targets?.map(t => t.value) ?? [])) * 1.15 || 1
-    const mx2 = d2.length > 0 ? Math.max(...d2) * 1.15 || 1 : mx1
+    const d1 = mk(seed)
+    const d2 = (grouped || stacked) ? mk2(seed + 50) : []
+    const d3 = (stacked && mk3) ? mk3(seed + 100) : []
+    // stacked: normalize by sum so bars represent totals; grouped: normalize series independently
+    const sums = stacked ? d1.map((v, i) => v + (d2[i] || 0) + (d3[i] || 0)) : d1
+    const mx1 = Math.max(...sums, target ?? 0, ...(targets?.map(t => t.value) ?? [])) * 1.15 || 1
+    const mx2 = d2.length > 0 && !stacked ? Math.max(...d2) * 1.15 || 1 : mx1
     let barEnd = W
     if (grouped) {
       const gGap = 3, bGap = 1
@@ -177,6 +230,26 @@ function MiniBarChart({ seed, n, lo, hi, target, targets, grouped, integer, unit
         ctx.fillStyle = i === hov ? '#6890a8' : '#a8bdd4'
         ctx.fillRect(x + bw + bGap, H - h2, bw, h2)
       })
+    } else if (stacked) {
+      const gap = 2, bw = Math.floor((W - gap * (n - 1)) / n)
+      barEnd = (n - 1) * (bw + gap) + bw
+      const has3 = d3.length > 0
+      d1.forEach((v, i) => {
+        const x = i * (bw + gap)
+        const h1 = Math.max(1, Math.round((v / mx1) * (H - 2)))
+        const h2 = Math.max(0, Math.round(((d2[i] || 0) / mx1) * (H - 2)))
+        const h3 = has3 ? Math.max(0, Math.round(((d3[i] || 0) / mx1) * (H - 2))) : 0
+        ctx.fillStyle = i === hov ? '#7ba3bd' : '#c5d5e8'
+        ctx.fillRect(x, H - h1, bw, h1)
+        if (h2 > 0) {
+          ctx.fillStyle = i === hov ? '#5a8fab' : '#8fb8d0'
+          ctx.fillRect(x, H - h1 - h2, bw, h2)
+        }
+        if (h3 > 0) {
+          ctx.fillStyle = i === hov ? '#3a6f8f' : '#5a8fab'
+          ctx.fillRect(x, H - h1 - h2 - h3, bw, h3)
+        }
+      })
     } else {
       const gap = 2, bw = Math.floor((W - gap * (n - 1)) / n)
       barEnd = (n - 1) * (bw + gap) + bw
@@ -187,7 +260,7 @@ function MiniBarChart({ seed, n, lo, hi, target, targets, grouped, integer, unit
       })
     }
     const lines = [
-      ...(target !== undefined ? [{ value: target, color: '#e8a020' }] : []),
+      ...(target !== undefined ? [{ value: target, color: '#059669' }] : []),
       ...(targets ?? []),
     ]
     if (lines.length > 0) {
@@ -213,7 +286,9 @@ function MiniBarChart({ seed, n, lo, hi, target, targets, grouped, integer, unit
     if (!el) return
     const W = el.offsetWidth
     const x = e.clientX - el.getBoundingClientRect().left
-    const d1 = mk(seed), d2 = grouped ? mk2(seed + 50) : []
+    const d1 = mk(seed)
+    const d2 = (grouped || stacked) ? mk2(seed + 50) : []
+    const d3 = (stacked && mk3) ? mk3(seed + 100) : []
     let idx: number
     if (grouped) {
       const gGap = 3, gW = Math.floor((W - gGap * (n - 1)) / n)
@@ -223,18 +298,18 @@ function MiniBarChart({ seed, n, lo, hi, target, targets, grouped, integer, unit
       idx = Math.max(0, Math.min(n - 1, Math.floor(x / (bw + gap))))
     }
     if (idx !== hovRef.current) { hovRef.current = idx; paint(idx) }
-    const v = d1[idx], v2 = grouped ? d2[idx] : undefined
+    const v = d1[idx], v2 = (grouped || stacked) ? d2[idx] : undefined, v3 = d3.length ? d3[idx] : undefined
     const fmt = (val: number) => integer ? String(Math.round(val)) : val < 10 ? val.toFixed(1) : String(Math.round(val))
     const u = unit ? ` ${unit}` : ''
     const label = getBarLabel(idx, n)
-    setTip({
-      x: e.clientX, y: e.clientY,
-      text: v2 !== undefined
+    const tipText = v3 !== undefined && groupLabels
+      ? `${label} · ${groupLabels[0]}:${fmt(v)} · ${groupLabels[1]}:${fmt(v2!)} · ${groupLabels[2]}:${fmt(v3)}`
+      : v2 !== undefined
         ? groupLabels
           ? `${label} · ${groupLabels[0]}: ${fmt(v)}${u} · ${groupLabels[1]}: ${v2.toFixed(1)}${d2Unit ? ' ' + d2Unit : ''}`
           : `${label} · Crit: ${v.toFixed(1)}h · Non-crit: ${v2.toFixed(1)}h`
-        : `${label}: ${fmt(v)}${u}`,
-    })
+        : `${label}: ${fmt(v)}${u}`
+    setTip({ x: e.clientX, y: e.clientY, text: tipText })
   }
 
   function handleLeave() {
@@ -246,16 +321,22 @@ function MiniBarChart({ seed, n, lo, hi, target, targets, grouped, integer, unit
     <div className="relative">
       <canvas ref={canvasRef} className="w-full block" style={{ height: 44 }}
         onMouseMove={handleMove} onMouseLeave={handleLeave} />
-      {grouped && groupLabels && (
-        <div className="flex gap-3 mt-1">
+      {(grouped || stacked) && groupLabels && (
+        <div className="flex gap-3 mt-1 flex-wrap">
           <span className="flex items-center gap-1 text-[10px] text-text-secondary">
             <span className="inline-block w-2.5 h-1.5 rounded-sm bg-[#c5d5e8]" />
             {groupLabels[0]}
           </span>
           <span className="flex items-center gap-1 text-[10px] text-text-secondary">
-            <span className="inline-block w-2.5 h-1.5 rounded-sm bg-[#a8bdd4]" />
+            <span className={`inline-block w-2.5 h-1.5 rounded-sm ${stacked && !grouped ? 'bg-[#8fb8d0]' : 'bg-[#a8bdd4]'}`} />
             {groupLabels[1]}
           </span>
+          {groupLabels[2] && (
+            <span className="flex items-center gap-1 text-[10px] text-text-secondary">
+              <span className="inline-block w-2.5 h-1.5 rounded-sm bg-[#5a8fab]" />
+              {groupLabels[2]}
+            </span>
+          )}
         </div>
       )}
       {tip && (
@@ -268,13 +349,12 @@ function MiniBarChart({ seed, n, lo, hi, target, targets, grouped, integer, unit
   )
 }
 
-function PerfCard({ title, sub, chartSub, value, unit, chartUnit, isGreen, dual, thresh, seed, n, lo, hi, target, targets, grouped, integer, d2Lo, d2Hi, d2Unit, groupLabels }: {
+function PerfCard({ title, sub, chartSub, value, unit, chartUnit, isGreen, dual, seed, n, lo, hi, target, targets, grouped, stacked, integer, d2Lo, d2Hi, d2Unit, d3Lo, d3Hi, groupLabels }: {
   title: string; sub: string; chartSub: string
   value?: number; unit?: string; chartUnit?: string; isGreen?: (v: number) => boolean
   dual?: { label: string; value: number; unit: string; isGreen?: (v: number) => boolean }[]
-  thresh?: { label: string; g: boolean }[]
-  seed: number; n: number; lo: number; hi: number; target?: number; targets?: { value: number; color: string }[]; grouped?: true; integer?: true
-  d2Lo?: number; d2Hi?: number; d2Unit?: string; groupLabels?: [string, string]
+  seed: number; n: number; lo: number; hi: number; target?: number; targets?: { value: number; color: string }[]; grouped?: true; stacked?: true; integer?: true
+  d2Lo?: number; d2Hi?: number; d2Unit?: string; d3Lo?: number; d3Hi?: number; groupLabels?: string[]
 }) {
   return (
     <div className="border border-border rounded-lg p-4">
@@ -297,24 +377,22 @@ function PerfCard({ title, sub, chartSub, value, unit, chartUnit, isGreen, dual,
         </div>
       )}
       <div className="text-[9px] text-text-secondary mt-2 mb-0.5">{chartSub}</div>
-      <MiniBarChart seed={seed} n={n} lo={lo} hi={hi} target={target} targets={targets} grouped={grouped} integer={integer} unit={chartUnit} d2Lo={d2Lo} d2Hi={d2Hi} d2Unit={d2Unit} groupLabels={groupLabels} />
-      {thresh && (
-        <div className="flex gap-1 flex-wrap mt-1.5">
-          {thresh.map(t => (
-            <span key={t.label} className={`text-[10px] px-1.5 py-0.5 rounded ${t.g ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
-              {t.label}
-            </span>
-          ))}
-        </div>
-      )}
+      <MiniBarChart seed={seed} n={n} lo={lo} hi={hi} target={target} targets={targets} grouped={grouped} stacked={stacked} integer={integer} unit={chartUnit} d2Lo={d2Lo} d2Hi={d2Hi} d2Unit={d2Unit} d3Lo={d3Lo} d3Hi={d3Hi} groupLabels={groupLabels} />
     </div>
   )
 }
 
 // ─── Main view ─────────────────────────────────────────────────────────────────
 
-const SECTION_IDS = ['sec-info', 'sec-health', 'sec-perf', 'sec-svc']
+const SECTION_IDS = ['sec-info', 'sec-health', 'sec-session', 'sec-perf', 'sec-svc']
 const SCROLL_MARGIN = { scrollMarginTop: 72 }
+
+const HEADER_TINT: Record<string, string> = {
+  healthy:    'border-l-emerald-500 bg-emerald-50',
+  deration:   'border-l-amber-500   bg-amber-50',
+  breakdown:  'border-l-red-500     bg-red-50',
+  'grid-down':'border-l-sky-500     bg-sky-50',
+}
 
 export default function ChargerDetailView({
   charger,
@@ -348,11 +426,10 @@ export default function ChargerDetailView({
       <div className="flex-1 flex flex-col overflow-hidden">
 
         {/* Single-row header */}
-        <div className="shrink-0 flex items-center gap-4 px-6 border-b border-border bg-background select-none" style={{ height: 60 }}>
+        <div className={`shrink-0 flex items-center gap-4 px-6 border-b border-border border-l-4 select-none ${HEADER_TINT[charger.health] ?? ''}`} style={{ height: 60 }}>
           <h1 className="text-xl font-light tracking-wide shrink-0">
             <span className="text-text-secondary">{charger.prefix}</span><strong className="font-bold">{charger.num}</strong>
           </h1>
-          <HealthPill status={charger.health} derationPct={charger.derationPct} />
           <StatePill state={charger.state} />
           <FreshnessTag mins={charger.freshMins} />
           <TimeScrubber
@@ -369,7 +446,7 @@ export default function ChargerDetailView({
             <section id="sec-info" style={SCROLL_MARGIN}>
               <div className="bg-background border border-border rounded-lg overflow-hidden">
                 <div className="px-5 py-4 border-b border-border">
-                  <span className="text-sm font-semibold">Charger info</span>
+                  <span className="text-base font-semibold">Charger info</span>
                 </div>
                 <div className="px-5 py-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-6 gap-y-3.5">
                   {[
@@ -400,6 +477,18 @@ export default function ChargerDetailView({
                       {charger.lat.toFixed(4)}, {charger.lng.toFixed(4)}
                     </a>
                   </div>
+                  <div className="flex flex-col gap-0.5 min-w-0">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">CCTV</span>
+                    <a
+                      href="#"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-medium text-foreground hover:underline"
+                    >
+                      <Video size={11} className="shrink-0 text-text-secondary" />
+                      View all cameras
+                    </a>
+                  </div>
                 </div>
               </div>
             </section>
@@ -407,10 +496,104 @@ export default function ChargerDetailView({
             {/* ── Charger health ── */}
             <section id="sec-health" style={SCROLL_MARGIN}>
               <div className="bg-background border border-border rounded-lg overflow-hidden">
-                <div className="px-5 py-4 border-b border-border">
-                  <span className="text-sm font-semibold">Charger health</span>
+                <div className="px-5 py-4 border-b border-border flex items-center gap-3">
+                  <span className="text-base font-semibold">Charger health</span>
+                  <HealthPill status={charger.health} derationPct={charger.derationPct} />
                 </div>
                 <ChargerSchematic chargerNum={charger.num} />
+              </div>
+            </section>
+
+            {/* ── Charging sessions ── */}
+            <section id="sec-session" style={SCROLL_MARGIN}>
+              <div className="bg-background border border-border rounded-lg overflow-hidden">
+                <div className="px-5 py-4 border-b border-border">
+                  <span className="text-base font-semibold">Charging sessions</span>
+                </div>
+                <div className="flex min-h-0">
+
+                  {/* Live session panel */}
+                  {(() => {
+                    const session = LIVE_SESSIONS[charger.num]
+                    const GUN_LABEL: Record<string, string> = { gun1: 'Gun 1', gun2: 'Gun 2', gun3: 'Gun 3' }
+                    return (
+                      <div className="w-64 shrink-0 border-r border-border px-5 py-5 flex flex-col gap-3">
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">Live session</span>
+                        {!session ? (
+                          <p className="text-xs text-text-secondary">No active session</p>
+                        ) : (
+                          <>
+                            <div className="flex items-center gap-1 text-[11px]">
+                              <span className="font-medium text-foreground">{session.sessionId}</span>
+                              <span className="text-text-secondary">·</span>
+                              <span className="text-text-secondary">{session.packId}</span>
+                            </div>
+                            <SocGauge current={session.currentSoc} className="w-full max-w-[180px] mx-auto h-auto" />
+                            <div className="grid grid-cols-3 gap-2">
+                              {[
+                                { label: 'Start SOC', value: `${session.startSoc}%` },
+                                { label: 'Duration',  value: `${session.durationMins} min` },
+                                { label: 'Energy',    value: `${session.energyKwh} kWh` },
+                              ].map(({ label, value }) => (
+                                <div key={label} className="flex flex-col gap-0.5">
+                                  <span className="text-[9px] font-semibold uppercase tracking-wider text-text-secondary">{label}</span>
+                                  <span className="text-xs font-medium text-foreground">{value}</span>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {session.guns.map(gun => (
+                                <div key={gun.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[10px] font-medium bg-emerald-50 border-emerald-200 text-emerald-700">
+                                  <Lock size={9} className="shrink-0" />
+                                  {GUN_LABEL[gun.id]}
+                                </div>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )
+                  })()}
+
+                  {/* Session history panel */}
+                  {(() => {
+                    const sessions = (CHARGER_SESSIONS[charger.num] ?? []).slice(0, 5)
+                    return (
+                      <div className="flex-1 min-w-0 px-5 py-5 flex flex-col gap-3">
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">Session history</span>
+                        {sessions.length === 0 ? (
+                          <p className="text-xs text-text-secondary">No session history</p>
+                        ) : (
+                          <div className="border border-border rounded-lg overflow-hidden">
+                            <table className="w-full border-collapse">
+                              <thead>
+                                <tr className="bg-muted border-b border-border">
+                                  {['Date', 'Session', 'Pack', 'SOC', 'Duration', 'Consumed', 'Sold'].map(h => (
+                                    <th key={h} className="text-left text-[9px] font-semibold uppercase tracking-wider text-text-secondary px-3 py-2 whitespace-nowrap">{h}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {sessions.map((s, i) => (
+                                  <tr key={i} className={`border-b border-border last:border-b-0 transition-colors ${s.status === 'failed' ? 'bg-red-50 hover:bg-red-100/60' : s.status === 'interrupted' ? 'bg-amber-50 hover:bg-amber-100/60' : 'bg-emerald-50 hover:bg-emerald-100/60'}`}>
+                                    <td className="px-3 py-2 text-xs text-text-secondary whitespace-nowrap">{s.date}</td>
+                                    <td className="px-3 py-2 text-xs font-medium text-foreground">{s.sessionId}</td>
+                                    <td className="px-3 py-2 text-xs text-foreground">{s.packId}</td>
+                                    <td className="px-3 py-2 text-xs text-foreground whitespace-nowrap">{s.startSoc}% → {s.endSoc}%</td>
+                                    <td className="px-3 py-2 text-xs text-foreground">{s.durationMins} min</td>
+                                    <td className="px-3 py-2 text-xs text-foreground">{s.energyConsumedKwh} kWh</td>
+                                    <td className="px-3 py-2 text-xs text-foreground">{s.energySoldKwh} kWh</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })()}
+
+                </div>
               </div>
             </section>
 
@@ -418,53 +601,62 @@ export default function ChargerDetailView({
             <section id="sec-perf" style={SCROLL_MARGIN}>
               <div className="bg-background border border-border rounded-lg overflow-hidden">
                 <div className="px-5 py-4 border-b border-border">
-                  <span className="text-sm font-semibold">Performance</span>
+                  <span className="text-base font-semibold">Performance</span>
                 </div>
                 <div className="px-5 py-4">
                   <div className="grid grid-cols-3 gap-3">
-                    <PerfCard title="Data Uptime" sub="30-day rolling avg" chartSub="Daily · last 30 days"
-                      value={94.1} unit="%" chartUnit="%" isGreen={v => v >= 95}
-                      thresh={[{label:'≥95%',g:true},{label:'<95%',g:false}]}
-                      seed={1} n={30} lo={88} hi={100} target={95} />
                     <PerfCard title="Charger Uptime" sub="30-day rolling avg" chartSub="Daily · last 30 days"
                       value={97.2} unit="%" chartUnit="%" isGreen={v => v >= 98}
-                      thresh={[{label:'≥98%',g:true},{label:'<98%',g:false}]}
                       seed={2} n={30} lo={92} hi={100} target={98} />
+                    <PerfCard title="Data Uptime" sub="30-day rolling avg" chartSub="Daily · last 30 days"
+                      value={98.8} unit="%" chartUnit="%" isGreen={v => v > 99.5}
+                      seed={1} n={30} lo={96} hi={100} target={99.5} />
+                    <PerfCard title="Power Availability" sub="30-day rolling avg" chartSub="Daily · last 30 days"
+                      dual={[
+                        { label: 'Grid + DG', value: 99.4, unit: '%', isGreen: v => v >= 99 },
+                        { label: 'DG active', value: 1.1,  unit: '%' },
+                      ]}
+                      seed={11} n={30} lo={90} hi={99} target={99}
+                      stacked d2Lo={0} d2Hi={8} d2Unit="%" groupLabels={['Grid', 'DG']} />
+                    <PerfCard title="Utilization" sub="30-day rolling avg" chartSub="Daily · last 30 days"
+                      value={68} unit="%" chartUnit="%" isGreen={v => v >= 60}
+                      seed={12} n={30} lo={35} hi={85} target={60} />
+                    <PerfCard title="Session Success Rate" sub="30-day rolling avg" chartSub="Charging time split · last 30 days"
+                      value={93.4} unit="%" isGreen={v => v > 98}
+                      seed={4} n={30} lo={55} hi={78}
+                      stacked d2Lo={12} d2Hi={28} d3Lo={2} d3Hi={10}
+                      groupLabels={['<25m', '25-45m', '>45m']} target={94} />
                     <PerfCard title="Charging Time" sub="30-day rolling avg" chartSub="Daily · last 30 days"
-                      value={23} unit="min" chartUnit="min" isGreen={v => v < 25}
-                      thresh={[{label:'<25m',g:true},{label:'≥25m',g:false}]}
-                      seed={3} n={30} lo={16} hi={34} target={25} />
-                    <PerfCard title="Session Success Rate" sub="30-day rolling avg" chartSub="Daily · last 30 days"
-                      value={93.4} unit="%" chartUnit="%" isGreen={v => v >= 95}
-                      thresh={[{label:'≥95%',g:true},{label:'<95%',g:false}]}
-                      seed={4} n={30} lo={86} hi={99} target={95} />
-                    <PerfCard title="Energy Sold" sub="This month" chartSub="Monthly · last 12 months"
+                      dual={[
+                        { label: 'Avg time',      value: 23, unit: 'min', isGreen: v => v < 25 },
+                        { label: 'Avg start SOC', value: 42, unit: '%' },
+                      ]}
+                      seed={3} n={30} lo={16} hi={34} target={25} chartUnit="min" />
+                    <PerfCard title="Energy Sold" sub="30-day rolling avg" chartSub="Daily · last 30 days"
                       dual={[
                         { label: 'Energy',  value: 221,  unit: 'MWh'   },
                         { label: 'Revenue', value: 39.8, unit: 'L INR' },
                       ]}
-                      chartUnit="MWh" seed={6} n={12} lo={150} hi={290}
-                      d2Lo={27} d2Hi={52} d2Unit="L INR" groupLabels={['MWh', 'L INR']} grouped />
-                    <PerfCard title="Charger Efficiency" sub="This month" chartSub="Monthly · last 12 months"
-                      value={89} unit="%" chartUnit="%" isGreen={v => v >= 85}
-                      thresh={[{label:'≥85%',g:true},{label:'<85%',g:false}]}
-                      seed={10} n={12} lo={78} hi={96} target={85} />
+                      chartUnit="MWh" seed={6} n={30} lo={4} hi={12} />
+                    <PerfCard title="Charger Efficiency" sub="30-day rolling avg" chartSub="Daily · last 30 days"
+                      dual={[
+                        { label: 'Overall',  value: 89, unit: '%', isGreen: v => v >= 80 },
+                        { label: 'Session',  value: 94, unit: '%', isGreen: v => v >= 85 },
+                      ]}
+                      chartUnit="%" seed={10} n={30} lo={79} hi={91} target={80} />
                     <PerfCard title="Queue Time" sub="30-day rolling avg" chartSub="Daily · last 30 days"
                       value={8} unit="min" chartUnit="min" isGreen={v => v <= 5}
-                      thresh={[{label:'≤5m',g:true},{label:'>5m',g:false}]}
                       seed={7} n={30} lo={2} hi={15} target={5} />
                     <PerfCard title="Breakdowns" sub="This month" chartSub="Monthly · last 12 months"
                       value={1} unit="this month" isGreen={v => v === 0}
-                      thresh={[{label:'0',g:true},{label:'≥1',g:false}]}
                       seed={8} n={12} lo={0} hi={4} integer />
                     <PerfCard title="Breakdown Duration" sub="This month" chartSub="Monthly · last 12 months"
                       dual={[
                         {label:'Critical',     value:1.8, unit:'h', isGreen: v => v <= 2},
                         {label:'Non-critical', value:6.2, unit:'h', isGreen: v => v <= 8},
                       ]}
-                      thresh={[{label:'Crit ≤2h',g:true},{label:'Non-crit ≤8h',g:true}]}
                       seed={9} n={12} lo={0.5} hi={9}
-                      targets={[{value:2,color:'#e8a020'},{value:8,color:'#e8a020'}]}
+                      targets={[{value:2,color:'#059669'},{value:8,color:'#059669'}]}
                       grouped />
                   </div>
                 </div>
@@ -475,7 +667,7 @@ export default function ChargerDetailView({
             <section id="sec-svc" style={SCROLL_MARGIN}>
               <div className="bg-background border border-border rounded-lg overflow-hidden">
                 <div className="px-5 py-4 border-b border-border flex items-center justify-between">
-                  <span className="text-sm font-semibold">Service history</span>
+                  <span className="text-base font-semibold">Service history</span>
                   <span className="text-xs text-text-secondary">
                     Next service due in <span className="font-semibold text-foreground">42 days</span>
                   </span>

@@ -12,5 +12,5 @@ export default async function ChargerDetailPage({
   if (idx === -1) notFound()
   const prev = idx > 0 ? CHARGERS[idx - 1] : null
   const next = idx < CHARGERS.length - 1 ? CHARGERS[idx + 1] : null
-  return <ChargerDetailView charger={CHARGERS[idx]} prev={prev} next={next} />
+  return <ChargerDetailView charger={CHARGERS[idx]} />
 }

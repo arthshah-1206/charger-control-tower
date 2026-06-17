@@ -51,7 +51,7 @@ const INTERIOR_CAMS: CCTVCamera[] = [
   { id: 'cam-int-02', label: 'Interior BR',       zone: 'Charger Interior', online: true,  rotation: 180, style: { right: '1%', bottom: '2%' } },
   { id: 'cam-int-03', label: 'Interior ML',       zone: 'Charger Interior', online: false, rotation: 0,   style: { left: '1%',  top: '44%'   } },
   { id: 'cam-int-04', label: 'Interior TR top',   zone: 'Charger Interior', online: true,  rotation: 180, style: { right: '1%', top: '2%'    } },
-  { id: 'cam-int-05', label: 'Interior TR right', zone: 'Charger Interior', online: true,  rotation: 135, style: { right: '1%', top: '10%'   } },
+  { id: 'cam-int-05', label: 'Interior BR right', zone: 'Charger Interior', online: true,  rotation: -60, style: { right: '1%', bottom: '10%' } },
 ]
 
 const BAY_CAMS: CCTVCamera[] = [
@@ -84,7 +84,7 @@ const SUBSYSTEMS: SubsystemDef[] = [
   },
   {
     id: 'chiller1', label: 'Chiller 1', schematicLabel: 'Chiller 1',
-    style: { left: '55%', top: '21%', width: '26%', height: '18%' },
+    style: { left: '58%', top: '21%', width: '24%', height: '18%' },
     metrics: [
       { label: 'Setpoint',          value: '22', unit: '°C' },
       { label: 'Actual Temp',       value: '23', unit: '°C' },
@@ -94,7 +94,7 @@ const SUBSYSTEMS: SubsystemDef[] = [
   },
   {
     id: 'chiller2', label: 'Chiller 2', schematicLabel: 'Chiller 2',
-    style: { left: '55%', top: '46%', width: '26%', height: '18%' },
+    style: { left: '58%', top: '46%', width: '24%', height: '18%' },
     metrics: [
       { label: 'Setpoint',          value: '22', unit: '°C' },
       { label: 'Actual Temp',       value: '31', unit: '°C' },
@@ -103,13 +103,33 @@ const SUBSYSTEMS: SubsystemDef[] = [
     ],
   },
   {
-    id: 'fluidSkid', label: 'Fluid Skid', schematicLabel: 'Fluid\nSkid',
-    style: { left: '35%', top: '11%', width: '19%', height: '78%' },
+    id: 'fluidCirculation', label: 'Fluid Skid · Circulation', schematicLabel: 'Circulation',
+    style: { left: '35%', top: '12%', width: '19%', height: '23%' },
     metrics: [
-      { label: 'Coolant Temp',   value: '24',  unit: '°C'    },
-      { label: 'Coolant Flow',   value: '12.4', unit: 'L/min' },
-      { label: 'Fluid Pressure', value: '2.1',  unit: 'bar'   },
-      { label: 'Pump Status',    value: '—',    tbd: true      },
+      { label: 'Coolant Flow',  value: '12.4', unit: 'L/min' },
+      { label: 'Pump Speed',    value: '2200', unit: 'RPM'   },
+      { label: 'Return Temp',   value: '28',   unit: '°C'    },
+      { label: 'Pump Status',   value: '—',    tbd: true     },
+    ],
+  },
+  {
+    id: 'fluidProcess', label: 'Fluid Skid · Process', schematicLabel: 'Process',
+    style: { left: '35%', top: '36%', width: '19%', height: '23%' },
+    metrics: [
+      { label: 'Inlet Temp',    value: '24',  unit: '°C' },
+      { label: 'Outlet Temp',   value: '32',  unit: '°C' },
+      { label: 'Pressure',      value: '2.1', unit: 'bar' },
+      { label: 'Heat Rejection', value: '45', unit: 'kW' },
+    ],
+  },
+  {
+    id: 'fluidFiltering', label: 'Fluid Skid · Filtering', schematicLabel: 'Filtering',
+    style: { left: '35%', top: '60%', width: '19%', height: '23%' },
+    metrics: [
+      { label: 'Filter Status',   value: 'Normal'          },
+      { label: 'Pressure Drop',   value: '0.3', unit: 'bar' },
+      { label: 'Filter Life',     value: '78',  unit: '%'   },
+      { label: 'Last Replaced',   value: '—',   tbd: true   },
     ],
   },
   {
@@ -214,13 +234,13 @@ const SUBSYSTEMS: SubsystemDef[] = [
 // ── Per-charger subsystem health ───────────────────────────────────────────────
 
 const CHARGER_HEALTH: Record<string, Record<string, HealthStatus>> = {
-  '001': { db: 'healthy',   chiller1: 'healthy',   chiller2: 'healthy',   fluidSkid: 'healthy',   pile1: 'healthy',   pile2: 'healthy',   pile3: 'healthy',    dispenser: 'healthy',   post: 'healthy',   gun1: 'healthy',   gun2: 'healthy',   gun3: 'healthy',   grid: 'healthy'   },
-  '002': { db: 'healthy',   chiller1: 'healthy',   chiller2: 'healthy',   fluidSkid: 'healthy',   pile1: 'healthy',   pile2: 'healthy',   pile3: 'healthy',    dispenser: 'healthy',   post: 'healthy',   gun1: 'healthy',   gun2: 'healthy',   gun3: 'healthy',   grid: 'breakdown' },
-  '003': { db: 'healthy',   chiller1: 'healthy',   chiller2: 'healthy',   fluidSkid: 'deration',  pile1: 'healthy',   pile2: 'healthy',   pile3: 'breakdown',  dispenser: 'healthy',   post: 'breakdown', gun1: 'healthy',   gun2: 'breakdown', gun3: 'healthy',   grid: 'healthy'   },
-  '004': { db: 'healthy',   chiller1: 'healthy',   chiller2: 'deration',  fluidSkid: 'deration',  pile1: 'healthy',   pile2: 'deration',  pile3: 'healthy',    dispenser: 'deration',  post: 'healthy',   gun1: 'healthy',   gun2: 'deration',  gun3: 'healthy',   grid: 'healthy'   },
-  '005': { db: 'healthy',   chiller1: 'breakdown', chiller2: 'breakdown', fluidSkid: 'breakdown', pile1: 'breakdown', pile2: 'healthy',   pile3: 'healthy',    dispenser: 'breakdown', post: 'breakdown', gun1: 'breakdown', gun2: 'healthy',   gun3: 'breakdown', grid: 'breakdown' },
-  '006': { db: 'healthy',   chiller1: 'healthy',   chiller2: 'healthy',   fluidSkid: 'healthy',   pile1: 'healthy',   pile2: 'healthy',   pile3: 'healthy',    dispenser: 'healthy',   post: 'healthy',   gun1: 'healthy',   gun2: 'healthy',   gun3: 'healthy',   grid: 'healthy'   },
-  '007': { db: 'healthy',   chiller1: 'healthy',   chiller2: 'healthy',   fluidSkid: 'healthy',   pile1: 'healthy',   pile2: 'healthy',   pile3: 'healthy',    dispenser: 'healthy',   post: 'healthy',   gun1: 'healthy',   gun2: 'healthy',   gun3: 'healthy',   grid: 'healthy'   },
+  '001': { db: 'healthy',   chiller1: 'healthy',   chiller2: 'healthy',   fluidCirculation: 'healthy',   fluidProcess: 'healthy',   fluidFiltering: 'healthy',   pile1: 'healthy',   pile2: 'healthy',   pile3: 'healthy',    dispenser: 'healthy',   post: 'healthy',   gun1: 'healthy',   gun2: 'healthy',   gun3: 'healthy',   grid: 'healthy'   },
+  '002': { db: 'healthy',   chiller1: 'healthy',   chiller2: 'healthy',   fluidCirculation: 'healthy',   fluidProcess: 'healthy',   fluidFiltering: 'healthy',   pile1: 'healthy',   pile2: 'healthy',   pile3: 'healthy',    dispenser: 'healthy',   post: 'healthy',   gun1: 'healthy',   gun2: 'healthy',   gun3: 'healthy',   grid: 'breakdown' },
+  '003': { db: 'healthy',   chiller1: 'healthy',   chiller2: 'healthy',   fluidCirculation: 'deration',  fluidProcess: 'healthy',   fluidFiltering: 'healthy',   pile1: 'healthy',   pile2: 'healthy',   pile3: 'breakdown',  dispenser: 'healthy',   post: 'breakdown', gun1: 'healthy',   gun2: 'breakdown', gun3: 'healthy',   grid: 'healthy'   },
+  '004': { db: 'healthy',   chiller1: 'healthy',   chiller2: 'deration',  fluidCirculation: 'deration',  fluidProcess: 'healthy',   fluidFiltering: 'healthy',   pile1: 'healthy',   pile2: 'deration',  pile3: 'healthy',    dispenser: 'deration',  post: 'healthy',   gun1: 'healthy',   gun2: 'deration',  gun3: 'healthy',   grid: 'healthy'   },
+  '005': { db: 'healthy',   chiller1: 'breakdown', chiller2: 'breakdown', fluidCirculation: 'breakdown', fluidProcess: 'breakdown', fluidFiltering: 'healthy',   pile1: 'breakdown', pile2: 'healthy',   pile3: 'healthy',    dispenser: 'breakdown', post: 'breakdown', gun1: 'breakdown', gun2: 'healthy',   gun3: 'breakdown', grid: 'breakdown' },
+  '006': { db: 'healthy',   chiller1: 'healthy',   chiller2: 'healthy',   fluidCirculation: 'healthy',   fluidProcess: 'healthy',   fluidFiltering: 'healthy',   pile1: 'healthy',   pile2: 'healthy',   pile3: 'healthy',    dispenser: 'healthy',   post: 'healthy',   gun1: 'healthy',   gun2: 'healthy',   gun3: 'healthy',   grid: 'healthy'   },
+  '007': { db: 'healthy',   chiller1: 'healthy',   chiller2: 'healthy',   fluidCirculation: 'healthy',   fluidProcess: 'healthy',   fluidFiltering: 'healthy',   pile1: 'healthy',   pile2: 'healthy',   pile3: 'healthy',    dispenser: 'healthy',   post: 'healthy',   gun1: 'healthy',   gun2: 'healthy',   gun3: 'healthy',   grid: 'healthy'   },
 }
 
 // ── Fault data ─────────────────────────────────────────────────────────────────
@@ -229,11 +249,11 @@ const ACTIVE_FAULTS: Record<string, ChargerFault[]> = {
   '003': [
     { dtc: '0x05 20', name: 'Post Contactor Weld Fault',       subsystem: 'Post',       subsystemId: 'post',      opsImpact: 'Breakdown', ticketId: 'SVC-2026-0842', reportedAt: '04 Jun 2026, 09:14' },
     { dtc: '0x03 12', name: 'Pile 3 IGBT Over-temperature',    subsystem: 'Pile 3',     subsystemId: 'pile3',     opsImpact: 'Breakdown', ticketId: 'SVC-2026-0841', reportedAt: '04 Jun 2026, 08:52' },
-    { dtc: '0x02 01', name: 'Fluid Skid Flow Rate Low',        subsystem: 'Fluid Skid', subsystemId: 'fluidSkid', opsImpact: 'Deration',  ticketId: 'SVC-2026-0839', reportedAt: '03 Jun 2026, 14:52' },
+    { dtc: '0x02 01', name: 'Fluid Skid Flow Rate Low',        subsystem: 'Fluid Skid · Circulation', subsystemId: 'fluidCirculation', opsImpact: 'Deration',  ticketId: 'SVC-2026-0839', reportedAt: '03 Jun 2026, 14:52' },
   ],
   '004': [
     { dtc: '0x01 08', name: 'Chiller 2 Refrigerant Pressure',  subsystem: 'Chiller 2',  subsystemId: 'chiller2',  opsImpact: 'Deration',  ticketId: 'SVC-2026-0847', reportedAt: '04 Jun 2026, 14:35' },
-    { dtc: '0x02 14', name: 'Fluid Skid Pump Speed Deviation', subsystem: 'Fluid Skid', subsystemId: 'fluidSkid', opsImpact: 'Deration',  ticketId: 'SVC-2026-0848', reportedAt: '03 Jun 2026, 14:22' },
+    { dtc: '0x02 14', name: 'Fluid Skid Pump Speed Deviation', subsystem: 'Fluid Skid · Circulation', subsystemId: 'fluidCirculation', opsImpact: 'Deration',  ticketId: 'SVC-2026-0848', reportedAt: '03 Jun 2026, 14:22' },
   ],
   '005': [
     { dtc: '0x01 01', name: 'Chiller 1 Compressor Fault',      subsystem: 'Chiller 1',  subsystemId: 'chiller1',  opsImpact: 'Breakdown', ticketId: 'SVC-2026-0851', reportedAt: '04 Jun 2026, 11:22' },
@@ -280,6 +300,30 @@ const opsImpactCls = (impact: string) =>
   impact === 'Breakdown' ? 'bg-red-50 text-red-700'
   : impact === 'Deration' ? 'bg-amber-50 text-amber-700'
   : 'bg-neutral-100 text-neutral-600'
+
+const MONTHS: Record<string, number> = { Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11 }
+function parseReportedAt(str: string): Date {
+  const [d, m, y, time] = str.replace(',', '').split(' ')
+  const [h, min] = time.split(':')
+  return new Date(+y, MONTHS[m], +d, +h, +min)
+}
+function openForMins(reportedAt: string): number {
+  return Math.floor((Date.now() - parseReportedAt(reportedAt).getTime()) / 60000)
+}
+function openFor(reportedAt: string): string {
+  const mins = openForMins(reportedAt)
+  if (mins < 60) return `${mins}m`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h ${mins % 60}m`
+  const days = Math.floor(hours / 24)
+  return `${days}d ${hours % 24}h`
+}
+function openForColor(reportedAt: string): string {
+  const mins = openForMins(reportedAt)
+  if (mins > 480) return 'text-red-600'
+  if (mins > 120) return 'text-amber-600'
+  return 'text-emerald-600'
+}
 
 // ── Fault tree ─────────────────────────────────────────────────────────────────
 
@@ -357,19 +401,48 @@ const FAULT_TREE_TEMPLATE: Record<string, FaultEquipment[]> = {
       { id: 'earth_fault_relay', label: 'Earth Fault Relay', status: 'healthy' },
     ]},
   ],
-  fluidSkid: [
-    { id: 'pump_assembly',  label: 'Pump Assembly',   status: 'healthy', components: [
-      { id: 'coolant_pump', label: 'Coolant Pump', status: 'healthy' },
-      { id: 'motor_drive',  label: 'Motor Drive',  status: 'healthy' },
+  fluidCirculation: [
+    { id: 'pump_assembly', label: 'Pump Assembly', status: 'healthy', components: [
+      { id: 'coolant_pump',       label: 'Coolant Pump',        status: 'healthy' },
+      { id: 'motor_drive',        label: 'Motor Drive',         status: 'healthy' },
+      { id: 'pump_speed_sensor',  label: 'Pump Speed Sensor',   status: 'healthy' },
     ]},
+    { id: 'flow_control', label: 'Flow Control', status: 'healthy', components: [
+      { id: 'flow_meter',   label: 'Flow Meter',   status: 'healthy' },
+      { id: 'bypass_valve', label: 'Bypass Valve', status: 'healthy' },
+    ]},
+    { id: 'circ_sensors', label: 'Sensors', status: 'healthy', components: [
+      { id: 'return_temp_sensor', label: 'Return Temp Sensor', status: 'healthy' },
+      { id: 'circ_pressure',      label: 'Circulation Pressure Sensor', status: 'healthy' },
+    ]},
+  ],
+  fluidProcess: [
     { id: 'heat_exchanger', label: 'Heat Exchanger', status: 'healthy', components: [
-      { id: 'hx_core',     label: 'HX Core',     status: 'healthy' },
-      { id: 'inlet_valve', label: 'Inlet Valve', status: 'healthy' },
+      { id: 'hx_core',      label: 'HX Core',      status: 'healthy' },
+      { id: 'inlet_valve',  label: 'Inlet Valve',  status: 'healthy' },
+      { id: 'outlet_valve', label: 'Outlet Valve', status: 'healthy' },
     ]},
-    { id: 'fs_sensors', label: 'Sensors', status: 'healthy', components: [
-      { id: 'temp_sensor',     label: 'Temp Sensor',     status: 'healthy' },
-      { id: 'pressure_sensor', label: 'Pressure Sensor', status: 'healthy' },
-      { id: 'flow_meter',      label: 'Flow Meter',      status: 'healthy' },
+    { id: 'temp_control', label: 'Temperature Control', status: 'healthy', components: [
+      { id: 'inlet_temp_sensor',  label: 'Inlet Temp Sensor',  status: 'healthy' },
+      { id: 'outlet_temp_sensor', label: 'Outlet Temp Sensor', status: 'healthy' },
+    ]},
+    { id: 'pressure_control', label: 'Pressure Control', status: 'healthy', components: [
+      { id: 'process_pressure_sensor', label: 'Pressure Sensor', status: 'healthy' },
+      { id: 'relief_valve',            label: 'Relief Valve',    status: 'healthy' },
+    ]},
+  ],
+  fluidFiltering: [
+    { id: 'filter_assembly', label: 'Filter Assembly', status: 'healthy', components: [
+      { id: 'primary_filter',   label: 'Primary Filter',   status: 'healthy' },
+      { id: 'secondary_filter', label: 'Secondary Filter', status: 'healthy' },
+    ]},
+    { id: 'filter_monitoring', label: 'Monitoring', status: 'healthy', components: [
+      { id: 'pressure_drop_sensor', label: 'Pressure Drop Sensor', status: 'healthy' },
+      { id: 'filter_life_sensor',   label: 'Filter Life Sensor',   status: 'healthy' },
+    ]},
+    { id: 'filter_maintenance', label: 'Maintenance', status: 'healthy', components: [
+      { id: 'drain_valve', label: 'Drain Valve', status: 'healthy' },
+      { id: 'vent_port',   label: 'Vent Port',   status: 'healthy' },
     ]},
   ],
   chiller1: CHILLER_EQ, chiller2: CHILLER_EQ,
@@ -418,25 +491,29 @@ const FAULT_TREE_TEMPLATE: Record<string, FaultEquipment[]> = {
 type CompOverride = { status: HealthStatus; detail?: string }
 const FAULT_OVERRIDES: Record<string, Record<string, Record<string, CompOverride>>> = {
   '003': {
-    pile3:     { igbt_module:  { status: 'breakdown', detail: 'Gate fault detected'    } },
-    post:      { output_bus:   { status: 'breakdown', detail: 'Supply interrupted'     } },
-    fluidSkid: { coolant_pump: { status: 'deration',  detail: 'Flow reduced 30%'       } },
+    pile3:             { igbt_module:  { status: 'breakdown', detail: 'Gate fault detected'    } },
+    post:              { output_bus:   { status: 'breakdown', detail: 'Supply interrupted'     } },
+    fluidCirculation:  { coolant_pump: { status: 'deration',  detail: 'Flow reduced 30%'       } },
   },
   '004': {
-    chiller2:  { compressor_motor:   { status: 'deration', detail: 'Temp 31°C vs setpoint 22°C'  } },
-    pile2:     { thermal_protection: { status: 'deration', detail: 'Thermal derating active'      } },
-    fluidSkid: { flow_meter:         { status: 'deration', detail: 'Reading unstable'             } },
-    dispenser: { output_contactor:   { status: 'deration', detail: 'Contact resistance elevated'  } },
+    chiller2:          { compressor_motor:   { status: 'deration', detail: 'Temp 31°C vs setpoint 22°C'  } },
+    pile2:             { thermal_protection: { status: 'deration', detail: 'Thermal derating active'      } },
+    fluidCirculation:  { flow_meter:         { status: 'deration', detail: 'Reading unstable'             } },
+    dispenser:         { output_contactor:   { status: 'deration', detail: 'Contact resistance elevated'  } },
   },
   '005': {
-    chiller1:  { compressor_motor: { status: 'breakdown', detail: 'Compressor fault'     },
-                 condenser_fan:    { status: 'breakdown', detail: 'Fan motor failed'      } },
-    chiller2:  { compressor_motor: { status: 'breakdown', detail: 'Compressor fault'     } },
-    pile1:     { igbt_module:      { status: 'breakdown', detail: 'Comm timeout'         } },
-    post:      { output_bus:       { status: 'breakdown', detail: 'Grid supply lost'     } },
-    gun1:      { contact_pins:     { status: 'breakdown', detail: 'Contact resistance high' } },
-    gun3:      { cp_circuit:       { status: 'breakdown', detail: 'CP signal lost'       } },
-    grid:      { incoming_voltage: { status: 'breakdown', detail: 'Supply interrupted'   } },
+    chiller1:         { compressor_motor: { status: 'breakdown', detail: 'Compressor fault'        },
+                        condenser_fan:    { status: 'breakdown', detail: 'Fan motor failed'         } },
+    chiller2:         { compressor_motor: { status: 'breakdown', detail: 'Compressor fault'        } },
+    pile1:            { igbt_module:      { status: 'breakdown', detail: 'Comm timeout'            } },
+    post:             { output_bus:       { status: 'breakdown', detail: 'Grid supply lost'        } },
+    gun1:             { contact_pins:     { status: 'breakdown', detail: 'Contact resistance high' } },
+    gun3:             { cp_circuit:       { status: 'breakdown', detail: 'CP signal lost'          } },
+    grid:             { incoming_voltage: { status: 'breakdown', detail: 'Supply interrupted'      } },
+    fluidCirculation: { coolant_pump:     { status: 'breakdown', detail: 'Pump stopped'            },
+                        flow_meter:       { status: 'breakdown', detail: 'No flow detected'        } },
+    fluidProcess:     { hx_core:          { status: 'breakdown', detail: 'Coolant flow lost'       },
+                        outlet_temp_sensor: { status: 'breakdown', detail: 'Over-temp alarm'       } },
   },
 }
 
@@ -691,6 +768,19 @@ export default function ChargerSchematic({ chargerNum }: { chargerNum: string })
               style={{ left: '15.5%', top: 0, height: '23%' }}
             />
 
+            {/* Fluid Skid group label — sits above the dashed border */}
+            <span
+              className="absolute text-[8px] font-semibold text-neutral-500 uppercase tracking-[0.06em] pointer-events-none text-center"
+              style={{ left: '33%', top: '7%', width: '23%' }}
+            >
+              Fluid Skid
+            </span>
+            {/* Fluid Skid group boundary */}
+            <div
+              className="absolute rounded-md border border-dashed border-neutral-400 pointer-events-none"
+              style={{ left: '33%', top: '10%', width: '23%', height: '76%' }}
+            />
+
             {/* Clickable subsystems — rectangles */}
             {SUBSYSTEMS.filter(s => !s.external && !s.circle).map(s => {
               const health     = healthMap[s.id] ?? 'healthy'
@@ -935,7 +1025,11 @@ export default function ChargerSchematic({ chargerNum }: { chargerNum: string })
               <tbody>
                 {visibleFaults.map((f, i) => (
                   <tr key={i} className="border-b border-border last:border-b-0 hover:bg-muted/30 transition-colors">
-                    <td className="px-3.5 py-2.5 text-xs text-foreground whitespace-nowrap">{f.reportedAt}</td>
+                    <td className="px-3.5 py-2.5 text-xs whitespace-nowrap">
+                      <span className="text-foreground">{f.reportedAt}</span>
+                      <span className="text-text-secondary mx-1">·</span>
+                      <span className={`font-medium ${openForColor(f.reportedAt)}`}>{openFor(f.reportedAt)}</span>
+                    </td>
                     <td className="px-3.5 py-2.5 text-xs text-foreground">{f.dtc}</td>
                     <td className="px-3.5 py-2.5 text-xs text-foreground">{f.name}</td>
                     <td className="px-3.5 py-2.5 text-xs text-foreground">{f.subsystem}</td>

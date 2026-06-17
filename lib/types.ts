@@ -9,6 +9,30 @@ export interface ChargerNotification {
   time: string
 }
 
+export type SessionStatus = 'success' | 'interrupted' | 'failed'
+
+export interface SessionRecord {
+  sessionId: string
+  packId: string
+  startSoc: number
+  endSoc: number
+  durationMins: number
+  energyConsumedKwh: number
+  energySoldKwh: number
+  date: string
+  status: SessionStatus
+}
+
+export interface ChargingSession {
+  sessionId: string
+  packId: string
+  startSoc: number
+  currentSoc: number
+  durationMins: number
+  energyKwh: number
+  guns: { id: 'gun1' | 'gun2' | 'gun3'; locked: boolean }[]
+}
+
 export interface Charger {
   prefix: string
   num: string

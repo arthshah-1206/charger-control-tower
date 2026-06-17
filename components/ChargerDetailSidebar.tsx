@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { ChevronLeft, Bell, User, Info, Activity, BarChart2, FileText } from 'lucide-react'
+import { ArrowLeft, Bell, User, Info, Activity, BarChart2, FileText, Zap } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { CHARGER_NOTIFICATIONS } from '@/lib/data'
@@ -43,7 +43,7 @@ function NotificationBell() {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(v => !v)}
-        className="relative p-1.5 rounded-lg text-text-secondary hover:bg-muted hover:text-foreground transition-colors"
+        className="relative p-1.5 rounded-lg text-text-secondary hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
       >
         <Bell size={15} strokeWidth={2} />
         {unread > 0 && (
@@ -93,10 +93,11 @@ function NotificationBell() {
 }
 
 const SECTIONS: { id: string; label: string; icon: LucideIcon }[] = [
-  { id: 'sec-info',   label: 'Charger info',    icon: Info      },
-  { id: 'sec-health', label: 'Charger health',  icon: Activity  },
-  { id: 'sec-perf',   label: 'Performance',     icon: BarChart2 },
-  { id: 'sec-svc',    label: 'Service history', icon: FileText  },
+  { id: 'sec-info',    label: 'Charger info',    icon: Info      },
+  { id: 'sec-health',  label: 'Charger health',  icon: Activity  },
+  { id: 'sec-session', label: 'Charging sessions', icon: Zap       },
+  { id: 'sec-perf',    label: 'Performance',     icon: BarChart2 },
+  { id: 'sec-svc',     label: 'Service history', icon: FileText  },
 ]
 
 export default function ChargerDetailSidebar({
@@ -106,17 +107,17 @@ export default function ChargerDetailSidebar({
 }) {
   return (
     <aside className="w-44 shrink-0 border-r border-border flex flex-col">
-      <div className="flex items-center justify-between h-12 px-3 border-b border-border">
-        <Image src="/exponent-logo.svg" alt="Exponent" width={80} height={14} className="h-3.5 w-auto" priority />
+      <div className="flex items-center justify-between px-3 border-b border-border" style={{ height: 60 }}>
+        <Link href="/"><Image src="/exponent-logo.svg" alt="Exponent" width={80} height={16} className="h-4 w-auto" priority /></Link>
         <NotificationBell />
       </div>
 
-      <div className="pt-2 px-2">
+      <div className="py-2 px-2 border-b border-border">
         <Link
           href="/"
-          className="flex items-center gap-2.5 px-2.5 h-8 rounded-lg text-xs font-medium text-text-secondary hover:bg-muted hover:text-foreground transition-colors w-full"
+          className="flex items-center gap-2 px-2.5 h-8 rounded-lg text-xs font-medium text-text-secondary hover:bg-muted hover:text-foreground transition-colors w-full"
         >
-          <ChevronLeft size={13} className="shrink-0" />
+          <ArrowLeft size={13} className="shrink-0" />
           All chargers
         </Link>
       </div>
