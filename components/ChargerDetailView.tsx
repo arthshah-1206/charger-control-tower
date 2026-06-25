@@ -517,7 +517,7 @@ export default function ChargerDetailView({
                                     </td>
                                     <td className="px-3 py-2 text-xs text-foreground">{PACK_BUS_MAP[s.packId] ?? s.packId}</td>
                                     <td className="px-3 py-2 text-xs text-foreground whitespace-nowrap">{s.startSoc}% → {s.endSoc}%</td>
-                                    <td className={`px-3 py-2 text-xs font-medium ${ragTime(s.durationMins)}`}>{s.durationMins} min</td>
+                                    <td className="px-3 py-2 text-xs text-foreground">{s.durationMins} min</td>
                                     <td className="px-3 py-2 text-xs text-foreground">{s.energySoldKwh} kWh</td>
                                     <td className={`px-3 py-2 text-xs font-medium ${ragEff(efficiency)}`}>
                                       {efficiency !== null ? `${efficiency}%` : '—'}
