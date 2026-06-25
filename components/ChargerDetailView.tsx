@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { MapPin, Lock, Video } from 'lucide-react'
+import { MapPin, Video } from 'lucide-react'
 import type { Charger } from '@/lib/types'
-import { CHARGER_NOTIFICATIONS, CHARGER_DETAIL_DATA, LIVE_SESSIONS, CHARGER_SESSIONS } from '@/lib/data'
+import { CHARGER_NOTIFICATIONS, CHARGER_DETAIL_DATA, CHARGER_SESSIONS } from '@/lib/data'
 import ChargerDetailSidebar from './ChargerDetailSidebar'
 import ChargerSchematic from './ChargerSchematic'
 import HealthPill from './HealthPill'
@@ -400,6 +400,7 @@ export default function ChargerDetailView({
   charger: Charger
 }) {
   const [activeSection, setActiveSection] = useState('sec-info')
+  const [sessionDateFilter, setSessionDateFilter] = useState<string>(() => new Date().toISOString().split('T')[0])
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -510,89 +511,70 @@ export default function ChargerDetailView({
                 <div className="px-5 py-4 border-b border-border">
                   <span className="text-base font-semibold">Charging sessions</span>
                 </div>
-                <div className="flex min-h-0">
-
-                  {/* Live session panel */}
+                <div className="px-5 py-5 flex flex-col gap-3">
                   {(() => {
-                    const session = LIVE_SESSIONS[charger.num]
-                    const GUN_LABEL: Record<string, string> = { gun1: 'Gun 1', gun2: 'Gun 2', gun3: 'Gun 3' }
-                    return (
-                      <div className="w-64 shrink-0 border-r border-border px-5 py-5 flex flex-col gap-3">
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">Live session</span>
-                        {!session ? (
-                          <p className="text-xs text-text-secondary">No active session</p>
-                        ) : (
-                          <>
-                            <div className="flex items-center gap-1 text-[11px]">
-                              <span className="font-medium text-foreground">{session.sessionId}</span>
-                              <span className="text-text-secondary">·</span>
-                              <span className="text-text-secondary">{session.packId}</span>
-                            </div>
-                            <SocGauge current={session.currentSoc} className="w-full max-w-[180px] mx-auto h-auto" />
-                            <div className="grid grid-cols-3 gap-2">
-                              {[
-                                { label: 'Start SOC', value: `${session.startSoc}%` },
-                                { label: 'Duration',  value: `${session.durationMins} min` },
-                                { label: 'Energy',    value: `${session.energyKwh} kWh` },
-                              ].map(({ label, value }) => (
-                                <div key={label} className="flex flex-col gap-0.5">
-                                  <span className="text-[9px] font-semibold uppercase tracking-wider text-text-secondary">{label}</span>
-                                  <span className="text-xs font-medium text-foreground">{value}</span>
-                                </div>
-                              ))}
-                            </div>
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              {session.guns.map(gun => (
-                                <div key={gun.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[10px] font-medium bg-emerald-50 border-emerald-200 text-emerald-700">
-                                  <Lock size={9} className="shrink-0" />
-                                  {GUN_LABEL[gun.id]}
-                                </div>
-                              ))}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    )
-                  })()}
+                    const allSessions = CHARGER_SESSIONS[charger.num] ?? []
+                    const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+                    // Convert '2026-06-09' → '09 Jun' to match session date format
+                    const toSessionDate = (iso: string) => {
+                      const [, m, d] = iso.split('-')
+                      return `${d} ${MONTHS_SHORT[parseInt(m) - 1]}`
+                    }
+                    const filtered = allSessions.filter(s => s.date.startsWith(toSessionDate(sessionDateFilter)))
 
-                  {/* Session history panel */}
-                  {(() => {
-                    const sessions = (CHARGER_SESSIONS[charger.num] ?? []).slice(0, 5)
                     return (
-                      <div className="flex-1 min-w-0 px-5 py-5 flex flex-col gap-3">
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">Session history</span>
-                        {sessions.length === 0 ? (
-                          <p className="text-xs text-text-secondary">No session history</p>
-                        ) : (
-                          <div className="border border-border rounded-lg overflow-hidden">
-                            <table className="w-full border-collapse">
-                              <thead>
-                                <tr className="bg-muted border-b border-border">
-                                  {['Date', 'Session', 'Pack', 'SOC', 'Duration', 'Consumed', 'Sold'].map(h => (
-                                    <th key={h} className="text-left text-[9px] font-semibold uppercase tracking-wider text-text-secondary px-3 py-2 whitespace-nowrap">{h}</th>
-                                  ))}
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {sessions.map((s, i) => (
+                      <>
+                        {/* Date filter */}
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="date"
+                            value={sessionDateFilter}
+                            max={new Date().toISOString().split('T')[0]}
+                            onChange={e => setSessionDateFilter(e.target.value)}
+                            className="h-8 px-2.5 rounded-lg border border-border bg-background text-xs text-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-foreground [font-family:inherit]"
+                          />
+                          <span className="text-xs text-text-secondary">
+                            {filtered.length} session{filtered.length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+
+                        {/* Sessions table */}
+                        {filtered.length === 0 ? (
+                          <p className="text-xs text-text-secondary py-2">No sessions on this date</p>
+                        ) : <div className="border border-border rounded-lg overflow-hidden">
+                          <table className="w-full border-collapse">
+                            <thead>
+                              <tr className="bg-muted border-b border-border">
+                                {['Date', 'Session', 'Pack', 'SOC', 'Duration', 'Energy Sold', 'Efficiency'].map(h => (
+                                  <th key={h} className="text-left text-[9px] font-semibold uppercase tracking-wider text-text-secondary px-3 py-2 whitespace-nowrap">{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {filtered.map((s, i) => {
+                                const efficiency = s.energyConsumedKwh > 0
+                                  ? Math.round((s.energySoldKwh / s.energyConsumedKwh) * 100)
+                                  : null
+                                return (
                                   <tr key={i} className={`border-b border-border last:border-b-0 transition-colors ${s.status === 'failed' ? 'bg-red-50 hover:bg-red-100/60' : s.status === 'interrupted' ? 'bg-amber-50 hover:bg-amber-100/60' : 'bg-emerald-50 hover:bg-emerald-100/60'}`}>
                                     <td className="px-3 py-2 text-xs text-text-secondary whitespace-nowrap">{s.date}</td>
                                     <td className="px-3 py-2 text-xs font-medium text-foreground">{s.sessionId}</td>
                                     <td className="px-3 py-2 text-xs text-foreground">{s.packId}</td>
                                     <td className="px-3 py-2 text-xs text-foreground whitespace-nowrap">{s.startSoc}% → {s.endSoc}%</td>
                                     <td className="px-3 py-2 text-xs text-foreground">{s.durationMins} min</td>
-                                    <td className="px-3 py-2 text-xs text-foreground">{s.energyConsumedKwh} kWh</td>
                                     <td className="px-3 py-2 text-xs text-foreground">{s.energySoldKwh} kWh</td>
+                                    <td className="px-3 py-2 text-xs text-foreground">
+                                      {efficiency !== null ? `${efficiency}%` : '—'}
+                                    </td>
                                   </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        )}
-                      </div>
+                                )
+                              })}
+                            </tbody>
+                          </table>
+                        </div>}
+                      </>
                     )
                   })()}
-
                 </div>
               </div>
             </section>
