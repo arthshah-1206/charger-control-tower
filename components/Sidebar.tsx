@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { Map, List, Bell, User } from 'lucide-react'
+import { Map, List, Bell, User, BarChart2, Layers } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { CHARGER_NOTIFICATIONS } from '@/lib/data'
@@ -10,7 +10,12 @@ import type { HealthStatus } from '@/lib/types'
 
 export type View = 'map' | 'list'
 
-const NAV: { view: View; icon: LucideIcon; label: string }[] = [
+const MAIN_NAV: { tab: 'fleet' | 'analytics'; icon: LucideIcon; label: string }[] = [
+  { tab: 'fleet',     icon: Layers,    label: 'Network'   },
+  { tab: 'analytics', icon: BarChart2, label: 'Analytics' },
+]
+
+const VIEW_NAV: { view: View; icon: LucideIcon; label: string }[] = [
   { view: 'map',  icon: Map,  label: 'Map'  },
   { view: 'list', icon: List, label: 'List' },
 ]
@@ -104,9 +109,13 @@ function NotificationBell() {
 }
 
 export default function Sidebar({
+  mainTab,
+  onMainTabChange,
   currentView,
   onViewChange,
 }: {
+  mainTab: 'fleet' | 'analytics'
+  onMainTabChange: (tab: 'fleet' | 'analytics') => void
   currentView: View
   onViewChange: (v: View) => void
 }) {
@@ -117,17 +126,14 @@ export default function Sidebar({
         <NotificationBell />
       </div>
 
-      <nav className="flex-1 pt-3 px-2">
-        <p className="px-2.5 text-[10px] font-semibold text-text-secondary uppercase tracking-wider mb-1">
-          Views
-        </p>
-        {NAV.map(({ view, icon: Icon, label }) => (
+      <nav className="flex-1 pt-3 px-2 flex flex-col gap-0.5">
+        {MAIN_NAV.map(({ tab, icon: Icon, label }) => (
           <button
-            key={view}
-            onClick={() => onViewChange(view)}
+            key={tab}
+            onClick={() => onMainTabChange(tab)}
             className={[
               'w-full flex items-center gap-2.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-colors cursor-pointer',
-              currentView === view
+              mainTab === tab
                 ? 'bg-foreground text-white'
                 : 'text-text-secondary hover:bg-muted hover:text-foreground',
             ].join(' ')}
@@ -136,6 +142,30 @@ export default function Sidebar({
             {label}
           </button>
         ))}
+
+        {mainTab === 'fleet' && (
+          <>
+            <div className="my-2 h-px bg-border mx-1" />
+            <p className="px-2.5 text-[10px] font-semibold text-text-secondary uppercase tracking-wider mb-1">
+              Views
+            </p>
+            {VIEW_NAV.map(({ view, icon: Icon, label }) => (
+              <button
+                key={view}
+                onClick={() => onViewChange(view)}
+                className={[
+                  'w-full flex items-center gap-2.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-colors cursor-pointer',
+                  currentView === view
+                    ? 'bg-foreground text-white'
+                    : 'text-text-secondary hover:bg-muted hover:text-foreground',
+                ].join(' ')}
+              >
+                <Icon size={14} className="shrink-0" />
+                {label}
+              </button>
+            ))}
+          </>
+        )}
       </nav>
 
       <div className="px-2 pb-3 border-t border-border pt-2">

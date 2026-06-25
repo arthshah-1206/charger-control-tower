@@ -1,116 +1,17 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { MapPin, Video } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { MapPin, Video, ExternalLink } from 'lucide-react'
 import type { Charger } from '@/lib/types'
-import { CHARGER_NOTIFICATIONS, CHARGER_DETAIL_DATA, CHARGER_SESSIONS } from '@/lib/data'
+import { CHARGER_NOTIFICATIONS, CHARGER_DETAIL_DATA, CHARGER_SESSIONS, LIVE_SESSIONS, PACK_BUS_MAP, bytebeamSessionUrl } from '@/lib/data'
+import { OperatorDisplay } from './operator-display/OperatorDisplay'
+import { operatorScreenFromCharger } from './operator-display/fromCharger'
+import LiveSessionPanel from './LiveSessionPanel'
 import ChargerDetailSidebar from './ChargerDetailSidebar'
-import ChargerSchematic from './ChargerSchematic'
+import ChargerSchematic, { CameraTimeline } from './ChargerSchematic'
 import HealthPill from './HealthPill'
 import StatePill from './StatePill'
 import FreshnessTag from './FreshnessTag'
-
-// ─── TimeScrubber (ported from H1Dash) ────────────────────────────────────────
-
-const WINDOW_HOURS = 24
-const TICKS = [0, 0.25, 0.5, 0.75, 1] as const
-function tickLabel(frac: number) {
-  if (frac === 1) return 'Now'
-  return `−${Math.round((1 - frac) * WINDOW_HOURS)}h`
-}
-
-function TimeScrubber({ chargerNum, wrapperClassName }: { chargerNum: string; wrapperClassName?: string }) {
-  const [pos, setPos] = useState(1)
-  const trackRef = useRef<HTMLDivElement>(null)
-  const isLive = pos > 0.995
-
-  const notifications = CHARGER_NOTIFICATIONS.filter(n => n.chargerId.endsWith(`-${chargerNum}`))
-  const markers = notifications.map((n, i) => ({
-    frac: 0.28 + i * 0.23,
-    color: n.to === 'breakdown' ? 'bg-red-500' : 'bg-amber-400',
-  }))
-
-  const computePos = useCallback((clientX: number) => {
-    const el = trackRef.current
-    if (!el) return
-    const { left, width } = el.getBoundingClientRect()
-    setPos(Math.max(0, Math.min(1, (clientX - left) / width)))
-  }, [])
-
-  const onMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault()
-    computePos(e.clientX)
-    const move = (ev: MouseEvent) => computePos(ev.clientX)
-    const up = () => {
-      document.removeEventListener('mousemove', move)
-      document.removeEventListener('mouseup', up)
-    }
-    document.addEventListener('mousemove', move)
-    document.addEventListener('mouseup', up)
-  }
-
-  return (
-    <div className={wrapperClassName ?? 'shrink-0 flex items-center gap-5 px-6 border-b border-border bg-background select-none'} style={wrapperClassName ? undefined : { height: 52 }}>
-      <div className="flex-1 flex flex-col justify-center gap-1.5">
-        <div
-          ref={trackRef}
-          className="relative h-1.5 rounded-full cursor-pointer bg-border"
-          onMouseDown={onMouseDown}
-        >
-          <div
-            className="absolute inset-y-0 left-0 rounded-full bg-foreground/25 pointer-events-none"
-            style={{ width: `${pos * 100}%` }}
-          />
-          {markers.map((m, i) => (
-            <span
-              key={i}
-              className={`absolute top-1/2 w-1.5 h-1.5 rounded-full pointer-events-none ${m.color}`}
-              style={{ left: `${m.frac * 100}%`, transform: 'translate(-50%, -50%)' }}
-            />
-          ))}
-          <div
-            className="absolute top-1/2 w-4 h-4 rounded-full bg-foreground border-2 border-background shadow-md cursor-grab active:cursor-grabbing z-10 transition-shadow hover:shadow-lg"
-            style={{ left: `${pos * 100}%`, transform: 'translate(-50%, -50%)' }}
-            onMouseDown={onMouseDown}
-          />
-        </div>
-        <div className="relative h-3 pointer-events-none">
-          {TICKS.map(frac => (
-            <span
-              key={frac}
-              className="absolute text-[9px] text-text-secondary"
-              style={{
-                left: `${frac * 100}%`,
-                transform: frac === 0 ? 'none' : frac === 1 ? 'translateX(-100%)' : 'translateX(-50%)',
-              }}
-            >
-              {tickLabel(frac)}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      <div className="w-24 shrink-0 flex items-center justify-end">
-        {isLive ? (
-          <div className="flex items-center gap-1.5">
-            <span className="relative flex w-2 h-2 shrink-0">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex w-2 h-2 rounded-full bg-emerald-500" />
-            </span>
-            <span className="text-[11px] font-semibold text-emerald-700 tracking-wider">LIVE</span>
-          </div>
-        ) : (
-          <button
-            onClick={() => setPos(1)}
-            className="text-[10px] font-semibold text-text-secondary hover:text-foreground border border-border rounded-md px-2.5 py-1 transition-colors hover:bg-muted"
-          >
-            Jump to live
-          </button>
-        )}
-      </div>
-    </div>
-  )
-}
 
 // ─── SOC Gauge ────────────────────────────────────────────────────────────────
 
@@ -384,7 +285,20 @@ function PerfCard({ title, sub, chartSub, value, unit, chartUnit, isGreen, dual,
 
 // ─── Main view ─────────────────────────────────────────────────────────────────
 
-const SECTION_IDS = ['sec-info', 'sec-health', 'sec-session', 'sec-perf', 'sec-svc']
+function ragTime(mins: number | null): string {
+  if (mins === null) return 'text-foreground'
+  if (mins <= 25) return 'text-emerald-600'
+  if (mins <= 35) return 'text-amber-600'
+  return 'text-red-600'
+}
+function ragEff(pct: number | null): string {
+  if (pct === null) return 'text-foreground'
+  if (pct >= 85) return 'text-emerald-600'
+  if (pct >= 75) return 'text-amber-600'
+  return 'text-red-600'
+}
+
+const SECTION_IDS = ['sec-info', 'sec-health', 'sec-live', 'sec-session', 'sec-perf', 'sec-svc']
 const SCROLL_MARGIN = { scrollMarginTop: 72 }
 
 const HEADER_TINT: Record<string, string> = {
@@ -403,14 +317,28 @@ export default function ChargerDetailView({
   const [sessionDateFilter, setSessionDateFilter] = useState<string>(() => new Date().toISOString().split('T')[0])
   const scrollRef = useRef<HTMLDivElement>(null)
 
+  const liveSession = LIVE_SESSIONS[charger.num] ?? null
+  const [elapsed, setElapsed] = useState(() => (liveSession?.durationMins ?? 0) * 60)
+  useEffect(() => {
+    if (!liveSession) return
+    const id = setInterval(() => setElapsed(e => e + 1), 1000)
+    return () => clearInterval(id)
+  }, [liveSession])
+
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
     const handler = () => {
+      if (el.scrollTop + el.clientHeight >= el.scrollHeight - 4) {
+        setActiveSection(SECTION_IDS[SECTION_IDS.length - 1])
+        return
+      }
+      const containerTop = el.getBoundingClientRect().top
+      const threshold = containerTop + 80
       let active = SECTION_IDS[0]
       for (const id of SECTION_IDS) {
         const sec = document.getElementById(id)
-        if (sec && sec.getBoundingClientRect().top < 80) active = id
+        if (sec && sec.getBoundingClientRect().top <= threshold) active = id
       }
       setActiveSection(active)
     }
@@ -433,10 +361,8 @@ export default function ChargerDetailView({
           </h1>
           <StatePill state={charger.state} />
           <FreshnessTag mins={charger.freshMins} />
-          <TimeScrubber
-            chargerNum={charger.num}
-            wrapperClassName="ml-auto flex items-center gap-3 w-96 mr-1"
-          />
+          <div className="flex-1" />
+          <CameraTimeline chargerNum={charger.num} variant="header" />
         </div>
 
         {/* Scrollable content */}
@@ -505,17 +431,57 @@ export default function ChargerDetailView({
               </div>
             </section>
 
+            {/* ── Live session ── */}
+            {(() => {
+              const baseScreen = operatorScreenFromCharger(charger)
+              const screen = baseScreen.session
+                ? { ...baseScreen, session: { ...baseScreen.session, timerSecs: elapsed } }
+                : baseScreen
+              return (
+                <section id="sec-live" style={SCROLL_MARGIN}>
+                  <div className="bg-background border border-border rounded-lg overflow-hidden">
+                    <div className="px-5 py-4 border-b border-border flex items-center gap-3">
+                      <span className="text-base font-semibold">Live session</span>
+                      {liveSession && (
+                        <div className="flex items-center gap-1.5">
+                          <span className="relative flex w-2 h-2 shrink-0">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                            <span className="relative inline-flex w-2 h-2 rounded-full bg-emerald-500" />
+                          </span>
+                          <span className="text-[11px] font-semibold text-emerald-700 tracking-wider">LIVE</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex divide-x divide-border" style={{ height: 480 }}>
+                      <div className="w-[380px] shrink-0 bg-muted/20">
+                        <OperatorDisplay screen={screen} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <LiveSessionPanel session={liveSession} charger={charger} elapsed={elapsed} />
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              )
+            })()}
+
             {/* ── Charging sessions ── */}
             <section id="sec-session" style={SCROLL_MARGIN}>
               <div className="bg-background border border-border rounded-lg overflow-hidden">
-                <div className="px-5 py-4 border-b border-border">
-                  <span className="text-base font-semibold">Charging sessions</span>
+                <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+                  <span className="text-base font-semibold">Session history</span>
+                  <input
+                    type="date"
+                    value={sessionDateFilter}
+                    max={new Date().toISOString().split('T')[0]}
+                    onChange={e => setSessionDateFilter(e.target.value)}
+                    className="h-8 px-2.5 rounded-lg border border-border bg-background text-xs text-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-foreground [font-family:inherit]"
+                  />
                 </div>
                 <div className="px-5 py-5 flex flex-col gap-3">
                   {(() => {
                     const allSessions = CHARGER_SESSIONS[charger.num] ?? []
                     const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
-                    // Convert '2026-06-09' → '09 Jun' to match session date format
                     const toSessionDate = (iso: string) => {
                       const [, m, d] = iso.split('-')
                       return `${d} ${MONTHS_SHORT[parseInt(m) - 1]}`
@@ -524,28 +490,14 @@ export default function ChargerDetailView({
 
                     return (
                       <>
-                        {/* Date filter */}
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="date"
-                            value={sessionDateFilter}
-                            max={new Date().toISOString().split('T')[0]}
-                            onChange={e => setSessionDateFilter(e.target.value)}
-                            className="h-8 px-2.5 rounded-lg border border-border bg-background text-xs text-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-foreground [font-family:inherit]"
-                          />
-                          <span className="text-xs text-text-secondary">
-                            {filtered.length} session{filtered.length !== 1 ? 's' : ''}
-                          </span>
-                        </div>
-
                         {/* Sessions table */}
                         {filtered.length === 0 ? (
-                          <p className="text-xs text-text-secondary py-2">No sessions on this date</p>
+                          <p className="text-sm text-text-secondary py-8 text-center">No sessions for this date</p>
                         ) : <div className="border border-border rounded-lg overflow-hidden">
                           <table className="w-full border-collapse">
                             <thead>
                               <tr className="bg-muted border-b border-border">
-                                {['Date', 'Session', 'Pack', 'SOC', 'Duration', 'Energy Sold', 'Efficiency'].map(h => (
+                                {['Date', 'Bus', 'SOC', 'Charging time', 'Energy Sold', 'Efficiency'].map(h => (
                                   <th key={h} className="text-left text-[9px] font-semibold uppercase tracking-wider text-text-secondary px-3 py-2 whitespace-nowrap">{h}</th>
                                 ))}
                               </tr>
@@ -556,14 +508,18 @@ export default function ChargerDetailView({
                                   ? Math.round((s.energySoldKwh / s.energyConsumedKwh) * 100)
                                   : null
                                 return (
-                                  <tr key={i} className={`border-b border-border last:border-b-0 transition-colors ${s.status === 'failed' ? 'bg-red-50 hover:bg-red-100/60' : s.status === 'interrupted' ? 'bg-amber-50 hover:bg-amber-100/60' : 'bg-emerald-50 hover:bg-emerald-100/60'}`}>
-                                    <td className="px-3 py-2 text-xs text-text-secondary whitespace-nowrap">{s.date}</td>
-                                    <td className="px-3 py-2 text-xs font-medium text-foreground">{s.sessionId}</td>
-                                    <td className="px-3 py-2 text-xs text-foreground">{s.packId}</td>
+                                  <tr key={i} className="border-b border-border last:border-b-0 hover:bg-muted/30 transition-colors">
+                                    <td className="px-3 py-2 text-xs whitespace-nowrap">
+                                      <a href={bytebeamSessionUrl(s.sessionId)} target="_blank" rel="noopener noreferrer" className="group inline-flex items-center gap-1 text-text-secondary hover:text-blue-600 transition-colors">
+                                        {s.date}
+                                        <ExternalLink size={11} className="shrink-0 opacity-40 group-hover:opacity-100" />
+                                      </a>
+                                    </td>
+                                    <td className="px-3 py-2 text-xs text-foreground">{PACK_BUS_MAP[s.packId] ?? s.packId}</td>
                                     <td className="px-3 py-2 text-xs text-foreground whitespace-nowrap">{s.startSoc}% → {s.endSoc}%</td>
-                                    <td className="px-3 py-2 text-xs text-foreground">{s.durationMins} min</td>
+                                    <td className={`px-3 py-2 text-xs font-medium ${ragTime(s.durationMins)}`}>{s.durationMins} min</td>
                                     <td className="px-3 py-2 text-xs text-foreground">{s.energySoldKwh} kWh</td>
-                                    <td className="px-3 py-2 text-xs text-foreground">
+                                    <td className={`px-3 py-2 text-xs font-medium ${ragEff(efficiency)}`}>
                                       {efficiency !== null ? `${efficiency}%` : '—'}
                                     </td>
                                   </tr>

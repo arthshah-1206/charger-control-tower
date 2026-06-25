@@ -9,6 +9,7 @@ import TopNav, { type HealthFilter } from './TopNav'
 import Sidebar, { type View } from './Sidebar'
 import ChargerList from './ChargerList'
 import ChargerCard from './ChargerCard'
+import AnalyticsView from './AnalyticsView'
 
 const ChargerMap = dynamic(() => import('./ChargerMap'), {
   ssr: false,
@@ -25,6 +26,7 @@ const ChargerMap = dynamic(() => import('./ChargerMap'), {
 const HEALTH_ORDER: Record<HealthStatus, number> = { breakdown: 0, 'grid-down': 1, deration: 2, healthy: 3 }
 
 export default function ChargerFleetView() {
+  const [mainTab, setMainTab] = useState<'fleet' | 'analytics'>('fleet')
   const [currentView, setCurrentView] = useState<View>('map')
   const [activeFilter, setActiveFilter] = useState<HealthFilter>('all')
   const [activeCorridor, setActiveCorridor] = useState('')
@@ -105,53 +107,61 @@ export default function ChargerFleetView() {
   return (
     <div className="flex h-full overflow-hidden">
       <Sidebar
+        mainTab={mainTab}
+        onMainTabChange={setMainTab}
         currentView={currentView}
         onViewChange={setCurrentView}
       />
 
       <div className="flex flex-col flex-1 overflow-hidden">
-        <TopNav
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          activeFilter={activeFilter}
-          onFilterChange={setActiveFilter}
-          activeCorridor={activeCorridor}
-          onCorridorChange={handleCorridorChange}
-          corridors={availableCorridors}
-          activeSite={activeSite}
-          onSiteChange={handleSiteChange}
-          sites={availableSites}
-          counts={counts}
-        />
+        {mainTab === 'analytics' ? (
+          <AnalyticsView />
+        ) : (
+          <>
+            <TopNav
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              activeFilter={activeFilter}
+              onFilterChange={setActiveFilter}
+              activeCorridor={activeCorridor}
+              onCorridorChange={handleCorridorChange}
+              corridors={availableCorridors}
+              activeSite={activeSite}
+              onSiteChange={handleSiteChange}
+              sites={availableSites}
+              counts={counts}
+            />
 
-        <main className="flex-1 overflow-hidden flex flex-col">
-          {currentView === 'list' ? (
-            <ChargerList chargers={sorted} />
-          ) : (
-            <div className="flex flex-1 overflow-hidden">
-              <div className="w-[380px] shrink-0 border-r border-border flex flex-col overflow-hidden px-4 pt-4">
-                <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pt-3 pb-4 pr-1 -mr-1">
-                  {sorted.length === 0 ? (
-                    <div className="py-12 text-center text-sm text-text-secondary">
-                      No chargers match your filters
+            <main className="flex-1 overflow-hidden flex flex-col">
+              {currentView === 'list' ? (
+                <ChargerList chargers={sorted} />
+              ) : (
+                <div className="flex flex-1 overflow-hidden">
+                  <div className="w-[380px] shrink-0 border-r border-border flex flex-col overflow-hidden px-4 pt-4">
+                    <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pt-3 pb-4 pr-1 -mr-1">
+                      {sorted.length === 0 ? (
+                        <div className="py-12 text-center text-sm text-text-secondary">
+                          No chargers match your filters
+                        </div>
+                      ) : (
+                        sorted.map(c => (
+                          <ChargerCard
+                            key={c.prefix + c.num}
+                            charger={c}
+                            isHovered={hoveredId === c.prefix + c.num}
+                            onMouseEnter={() => setHoveredId(c.prefix + c.num)}
+                            onMouseLeave={() => setHoveredId(null)}
+                          />
+                        ))
+                      )}
                     </div>
-                  ) : (
-                    sorted.map(c => (
-                      <ChargerCard
-                        key={c.prefix + c.num}
-                        charger={c}
-                        isHovered={hoveredId === c.prefix + c.num}
-                        onMouseEnter={() => setHoveredId(c.prefix + c.num)}
-                        onMouseLeave={() => setHoveredId(null)}
-                      />
-                    ))
-                  )}
+                  </div>
+                  <ChargerMap chargers={sorted} hoveredId={hoveredId} />
                 </div>
-              </div>
-              <ChargerMap chargers={sorted} hoveredId={hoveredId} />
-            </div>
-          )}
-        </main>
+              )}
+            </main>
+          </>
+        )}
       </div>
     </div>
   )

@@ -233,7 +233,7 @@ const SUBSYSTEMS: SubsystemDef[] = [
 
 // ── Per-charger subsystem health ───────────────────────────────────────────────
 
-const CHARGER_HEALTH: Record<string, Record<string, HealthStatus>> = {
+export const CHARGER_HEALTH: Record<string, Record<string, HealthStatus>> = {
   '001': { db: 'healthy',   chiller1: 'healthy',   chiller2: 'healthy',   fluidCirculation: 'healthy',   fluidProcess: 'healthy',   fluidFiltering: 'healthy',   pile1: 'healthy',   pile2: 'healthy',   pile3: 'healthy',    dispenser: 'healthy',   post: 'healthy',   gun1: 'healthy',   gun2: 'healthy',   gun3: 'healthy',   grid: 'healthy'   },
   '002': { db: 'healthy',   chiller1: 'healthy',   chiller2: 'healthy',   fluidCirculation: 'healthy',   fluidProcess: 'healthy',   fluidFiltering: 'healthy',   pile1: 'healthy',   pile2: 'healthy',   pile3: 'healthy',    dispenser: 'healthy',   post: 'healthy',   gun1: 'healthy',   gun2: 'healthy',   gun3: 'healthy',   grid: 'breakdown' },
   '003': { db: 'healthy',   chiller1: 'healthy',   chiller2: 'healthy',   fluidCirculation: 'deration',  fluidProcess: 'healthy',   fluidFiltering: 'healthy',   pile1: 'healthy',   pile2: 'healthy',   pile3: 'breakdown',  dispenser: 'healthy',   post: 'breakdown', gun1: 'healthy',   gun2: 'breakdown', gun3: 'healthy',   grid: 'healthy'   },
@@ -552,7 +552,11 @@ function camTickLabel(frac: number) {
   return `−${Math.round((1 - frac) * CAM_WINDOW_HOURS)}h`
 }
 
-function CameraTimeline({ chargerNum }: { chargerNum: string }) {
+export function CameraTimeline({ chargerNum, className, variant = 'panel' }: {
+  chargerNum: string
+  className?: string
+  variant?: 'panel' | 'header'
+}) {
   const [pos, setPos] = useState(1)
   const trackRef = useRef<HTMLDivElement>(null)
   const isLive = pos > 0.995
@@ -587,9 +591,84 @@ function CameraTimeline({ chargerNum }: { chargerNum: string }) {
   const hoursBack = (1 - pos) * CAM_WINDOW_HOURS
   const timeLabel = hoursBack < 1 ? '< 1h ago' : `${Math.round(hoursBack)}h ago`
 
+  const Track = (
+    <div className="flex flex-col gap-1.5">
+      <div
+        ref={trackRef}
+        className="relative h-1.5 rounded-full cursor-pointer bg-border"
+        onMouseDown={onTrackMouseDown}
+      >
+        <div
+          className="absolute inset-y-0 left-0 rounded-full bg-foreground/25 pointer-events-none"
+          style={{ width: `${pos * 100}%` }}
+        />
+        {markers.map((m, i) => (
+          <span
+            key={i}
+            title={m.label}
+            className={`absolute top-1/2 w-2 h-2 rounded-full pointer-events-none ${m.color}`}
+            style={{ left: `${m.frac * 100}%`, transform: 'translate(-50%, -50%)' }}
+          />
+        ))}
+        <div
+          className="absolute top-1/2 w-3.5 h-3.5 rounded-full bg-foreground border-2 border-background shadow-md cursor-grab active:cursor-grabbing z-10 hover:shadow-lg"
+          style={{ left: `${pos * 100}%`, transform: 'translate(-50%, -50%)' }}
+          onMouseDown={onTrackMouseDown}
+        />
+      </div>
+      <div className="relative h-3 pointer-events-none">
+        {CAM_TICKS.map(frac => (
+          <span
+            key={frac}
+            className="absolute text-[9px] text-text-secondary"
+            style={{
+              left: `${frac * 100}%`,
+              transform: frac === 0 ? 'none' : frac === 1 ? 'translateX(-100%)' : 'translateX(-50%)',
+            }}
+          >
+            {camTickLabel(frac)}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+
+  const LiveBadge = (
+    <div className="shrink-0 flex items-center gap-1.5">
+      {isLive ? (
+        <>
+          <span className="relative flex w-2 h-2 shrink-0">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex w-2 h-2 rounded-full bg-emerald-500" />
+          </span>
+          <span className="text-[10px] font-semibold text-emerald-700 tracking-wider">LIVE</span>
+        </>
+      ) : (
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] font-semibold text-foreground">{timeLabel}</span>
+          <button
+            onClick={e => { e.stopPropagation(); setPos(1) }}
+            className="text-[9px] font-semibold text-text-secondary hover:text-foreground border border-border rounded px-2 py-0.5 transition-colors hover:bg-muted"
+          >
+            Go live
+          </button>
+        </div>
+      )}
+    </div>
+  )
+
+  if (variant === 'header') {
+    return (
+      <div className="flex items-center gap-4 select-none" onClick={e => e.stopPropagation()}>
+        <div className="w-64 shrink-0">{Track}</div>
+        {LiveBadge}
+      </div>
+    )
+  }
+
   return (
     <div
-      className="px-4 py-3 border-t border-border bg-background select-none flex items-center gap-4"
+      className={`px-4 py-3 bg-background select-none flex items-center gap-4 ${className ?? 'border-t border-border'}`}
       onClick={e => e.stopPropagation()}
     >
       <div className="w-20 shrink-0 flex items-center gap-1.5">
@@ -605,47 +684,7 @@ function CameraTimeline({ chargerNum }: { chargerNum: string }) {
           <span className="text-[10px] font-semibold text-foreground">{timeLabel}</span>
         )}
       </div>
-
-      <div className="flex-1 flex flex-col justify-center gap-1.5">
-        <div
-          ref={trackRef}
-          className="relative h-1.5 rounded-full cursor-pointer bg-border"
-          onMouseDown={onTrackMouseDown}
-        >
-          <div
-            className="absolute inset-y-0 left-0 rounded-full bg-foreground/25 pointer-events-none"
-            style={{ width: `${pos * 100}%` }}
-          />
-          {markers.map((m, i) => (
-            <span
-              key={i}
-              title={m.label}
-              className={`absolute top-1/2 w-2 h-2 rounded-full pointer-events-none ${m.color}`}
-              style={{ left: `${m.frac * 100}%`, transform: 'translate(-50%, -50%)' }}
-            />
-          ))}
-          <div
-            className="absolute top-1/2 w-3.5 h-3.5 rounded-full bg-foreground border-2 border-background shadow-md cursor-grab active:cursor-grabbing z-10 hover:shadow-lg"
-            style={{ left: `${pos * 100}%`, transform: 'translate(-50%, -50%)' }}
-            onMouseDown={onTrackMouseDown}
-          />
-        </div>
-        <div className="relative h-3 pointer-events-none">
-          {CAM_TICKS.map(frac => (
-            <span
-              key={frac}
-              className="absolute text-[9px] text-text-secondary"
-              style={{
-                left: `${frac * 100}%`,
-                transform: frac === 0 ? 'none' : frac === 1 ? 'translateX(-100%)' : 'translateX(-50%)',
-              }}
-            >
-              {camTickLabel(frac)}
-            </span>
-          ))}
-        </div>
-      </div>
-
+      <div className="flex-1">{Track}</div>
       <div className="w-16 shrink-0 flex justify-end">
         {!isLive && (
           <button

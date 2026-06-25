@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowLeft, Bell, User, Info, Activity, BarChart2, FileText, Zap } from 'lucide-react'
+import { ArrowLeft, Bell, User, Info, HeartPulse, Radio, History, Activity, Wrench } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { CHARGER_NOTIFICATIONS } from '@/lib/data'
@@ -93,11 +93,12 @@ function NotificationBell() {
 }
 
 const SECTIONS: { id: string; label: string; icon: LucideIcon }[] = [
-  { id: 'sec-info',    label: 'Charger info',    icon: Info      },
-  { id: 'sec-health',  label: 'Charger health',  icon: Activity  },
-  { id: 'sec-session', label: 'Charging sessions', icon: Zap       },
-  { id: 'sec-perf',    label: 'Performance',     icon: BarChart2 },
-  { id: 'sec-svc',     label: 'Service history', icon: FileText  },
+  { id: 'sec-info',    label: 'Charger info',    icon: Info       },
+  { id: 'sec-health',  label: 'Charger health',  icon: HeartPulse },
+  { id: 'sec-live',    label: 'Live session',    icon: Radio      },
+  { id: 'sec-session', label: 'Session history', icon: History    },
+  { id: 'sec-perf',    label: 'Performance',     icon: Activity   },
+  { id: 'sec-svc',     label: 'Service history', icon: Wrench     },
 ]
 
 export default function ChargerDetailSidebar({

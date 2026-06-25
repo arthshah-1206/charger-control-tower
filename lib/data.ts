@@ -139,6 +139,34 @@ export const CHARGER_SESSIONS: Record<string, SessionRecord[]> = {
   ],
 }
 
+// Map pack ID → bus registration number
+export const PACK_BUS_MAP: Record<string, string> = {
+  'PK-4471': 'AP-16-Z-4471',
+  'PK-3821': 'AP-16-Z-3821',
+  'PK-5102': 'AP-16-Z-5102',
+  'PK-7731': 'AP-16-Z-7731',
+  'PK-8820': 'AP-16-Z-8820',
+  'PK-9104': 'AP-16-Z-9104',
+  'PK-3301': 'AP-09-Z-3301',
+  'PK-4412': 'AP-09-Z-4412',
+  'PK-5508': 'AP-09-Z-5508',
+  'PK-2291': 'AP-39-Z-2291',
+  'PK-3104': 'AP-39-Z-3104',
+  'PK-4883': 'AP-39-Z-4883',
+  'PK-6612': 'AP-39-Z-6612',
+  'PK-7703': 'AP-39-Z-7703',
+  'PK-8801': 'AP-39-Z-8801',
+  'PK-1192': 'TN-32-Z-1192',
+  'PK-2283': 'TN-32-Z-2283',
+  'PK-3374': 'TN-32-Z-3374',
+  'PK-5541': 'KA-01-Z-5541',
+  'PK-6630': 'KA-01-Z-6630',
+  'PK-7712': 'KA-01-Z-7712',
+}
+
+// TODO: replace with real Bytebeam session URL once format is confirmed
+export const bytebeamSessionUrl = (_sessionId: string): string => '#'
+
 export const CHARGER_NOTIFICATIONS: ChargerNotification[] = [
   { id: 'cn1', chargerId: 'EXP-C-003', from: 'deration',  to: 'breakdown', time: '08:14' },
   { id: 'cn2', chargerId: 'EXP-C-005', from: 'healthy',   to: 'breakdown', time: '11:22' },
