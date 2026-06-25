@@ -228,6 +228,7 @@ export default function AnalyticsView() {
               <input
                 type="date"
                 value={customFrom}
+                max={new Date().toISOString().split('T')[0]}
                 onChange={e => setCustomFrom(e.target.value)}
                 className="h-8 px-2.5 text-xs rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-foreground cursor-pointer"
               />
@@ -236,6 +237,7 @@ export default function AnalyticsView() {
                 type="date"
                 value={customTo}
                 min={customFrom}
+                max={new Date().toISOString().split('T')[0]}
                 onChange={e => setCustomTo(e.target.value)}
                 className="h-8 px-2.5 text-xs rounded-lg border border-border bg-background focus:outline-none focus:ring-1 focus:ring-foreground cursor-pointer"
               />
