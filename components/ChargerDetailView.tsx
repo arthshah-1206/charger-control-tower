@@ -442,8 +442,6 @@ export default function ChargerDetailView({
                   <div className="bg-background border border-border rounded-lg overflow-hidden">
                     <div className="px-5 py-4 border-b border-border flex items-center gap-3">
                       <span className="text-base font-semibold">Live session</span>
-                      {liveSession && (
-                      )}
                     </div>
                     <div className="flex divide-x divide-border" style={{ height: 480 }}>
                       <div className="w-[380px] shrink-0 bg-neutral-100">
