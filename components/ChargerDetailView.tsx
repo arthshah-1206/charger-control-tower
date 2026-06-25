@@ -443,14 +443,10 @@ export default function ChargerDetailView({
                     <div className="px-5 py-4 border-b border-border flex items-center gap-3">
                       <span className="text-base font-semibold">Live session</span>
                       {liveSession && (
-                        <span className="relative flex w-2 h-2 shrink-0">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                          <span className="relative inline-flex w-2 h-2 rounded-full bg-emerald-500" />
-                        </span>
                       )}
                     </div>
                     <div className="flex divide-x divide-border" style={{ height: 480 }}>
-                      <div className="w-[380px] shrink-0 bg-muted/20">
+                      <div className="w-[380px] shrink-0 bg-neutral-100">
                         <OperatorDisplay screen={screen} />
                       </div>
                       <div className="flex-1 min-w-0">
