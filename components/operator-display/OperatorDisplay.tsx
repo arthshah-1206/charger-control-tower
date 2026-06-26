@@ -3,7 +3,6 @@
 import { useRef, useState, useEffect } from 'react'
 import type { LockState, OperatorConnector, OperatorHealth, OperatorScreen, TileState } from './types'
 import { Lock, LockOpen, Plug, TILE_ICON, Triangle } from './icons'
-import './operator-display.css'
 
 const TILE_LABEL: Record<keyof OperatorHealth, string> = {
   grid: 'Grid', master: 'Master', plumbing: 'Plumbing',

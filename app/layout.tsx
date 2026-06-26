@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Bai_Jamjuree } from "next/font/google";
 import "./globals.css";
+import "../components/operator-display/operator-display.css";
 
 const baiJamjuree = Bai_Jamjuree({
   variable: "--font-bai-jamjuree",
