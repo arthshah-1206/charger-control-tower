@@ -285,12 +285,6 @@ function PerfCard({ title, sub, chartSub, value, unit, chartUnit, isGreen, dual,
 
 // ─── Main view ─────────────────────────────────────────────────────────────────
 
-function ragTime(mins: number | null): string {
-  if (mins === null) return 'text-foreground'
-  if (mins <= 25) return 'text-emerald-600'
-  if (mins <= 35) return 'text-amber-600'
-  return 'text-red-600'
-}
 function ragEff(pct: number | null): string {
   if (pct === null) return 'text-foreground'
   if (pct >= 85) return 'text-emerald-600'

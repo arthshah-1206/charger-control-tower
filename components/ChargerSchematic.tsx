@@ -731,6 +731,7 @@ export default function ChargerSchematic({ chargerNum }: { chargerNum: string })
   )
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!selectedId) { setExpandedEquipment(new Set()); return }
     const tree = getFaultTree(chargerNum, selectedId)
     setExpandedEquipment(new Set(tree.filter(e => e.status !== 'healthy').map(e => e.id)))

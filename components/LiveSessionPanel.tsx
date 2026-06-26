@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { Zap } from 'lucide-react'
 import type { ChargingSession, Charger } from '@/lib/types'
 
@@ -19,6 +20,8 @@ export default function LiveSessionPanel({
   charger: Charger
   elapsed: number
 }) {
+  const [startTime] = useState(() => new Date(Date.now() - (session?.durationMins ?? 0) * 60 * 1000))
+
   if (!session) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-3 p-8">
@@ -33,7 +36,6 @@ export default function LiveSessionPanel({
   const socDelta = session.currentSoc - session.startSoc
   const progressPct = Math.min((elapsed / (TARGET_MINS * 60)) * 100, 100)
   const revenue = Math.round(session.energyKwh * RATE_PER_KWH)
-  const startTime = new Date(Date.now() - session.durationMins * 60 * 1000)
   const nowStr = fmtClock(new Date(startTime.getTime() + elapsed * 1000))
 
   return (
