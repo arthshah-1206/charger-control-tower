@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { MapPin, Video, ExternalLink } from 'lucide-react'
 import type { Charger } from '@/lib/types'
-import { CHARGER_NOTIFICATIONS, CHARGER_DETAIL_DATA, CHARGER_SESSIONS, LIVE_SESSIONS, PACK_BUS_MAP, bytebeamSessionUrl } from '@/lib/data'
+import { CHARGER_DETAIL_DATA, CHARGER_SESSIONS, LIVE_SESSIONS, PACK_BUS_MAP, bytebeamSessionUrl } from '@/lib/data'
 import { OperatorDisplay } from './operator-display/OperatorDisplay'
 import { operatorScreenFromCharger } from './operator-display/fromCharger'
 import LiveSessionPanel from './LiveSessionPanel'
@@ -12,47 +12,6 @@ import ChargerSchematic, { CameraTimeline } from './ChargerSchematic'
 import HealthPill from './HealthPill'
 import StatePill from './StatePill'
 import FreshnessTag from './FreshnessTag'
-
-// ─── SOC Gauge ────────────────────────────────────────────────────────────────
-
-function SocGauge({ current, className }: { current: number; className?: string }) {
-  // Semicircle: 180° (left) → CW through 270° (top) → 0° (right), sweep=1
-  const cx = 50, cy = 48, r = 40
-  const toRad = (deg: number) => deg * Math.PI / 180
-  const pt = (deg: number): [number, number] => [cx + r * Math.cos(toRad(deg)), cy + r * Math.sin(toRad(deg))]
-
-  const [sx, sy] = pt(180)  // left
-  const [ex, ey] = pt(0)    // right
-  const trackPath = `M ${sx.toFixed(1)} ${sy.toFixed(1)} A ${r} ${r} 0 0 1 ${ex.toFixed(1)} ${ey.toFixed(1)}`
-
-  const clamped = Math.min(Math.max(current, 0), 99.99)
-  const fillAngle = 180 + (clamped / 100) * 180
-  const [fx, fy] = pt(fillAngle)
-  const fillPath = `M ${sx.toFixed(1)} ${sy.toFixed(1)} A ${r} ${r} 0 0 1 ${fx.toFixed(1)} ${fy.toFixed(1)}`
-
-  return (
-    <svg viewBox="0 0 100 60" className={className ?? 'w-20 h-auto shrink-0'} style={{ overflow: 'visible' }}>
-      <defs>
-        <linearGradient id="soc-grad" x1={sx.toFixed(1)} y1="0" x2={ex.toFixed(1)} y2="0" gradientUnits="userSpaceOnUse">
-          <stop offset="0%"   stopColor="#ef4444" />
-          <stop offset="35%"  stopColor="#f97316" />
-          <stop offset="65%"  stopColor="#eab308" />
-          <stop offset="100%" stopColor="#22c55e" />
-        </linearGradient>
-      </defs>
-      <path d={trackPath} fill="none" stroke="#e5e7eb" strokeWidth="7" strokeLinecap="round" />
-      {current > 0 && (
-        <path d={fillPath} fill="none" stroke="url(#soc-grad)" strokeWidth="7" strokeLinecap="round" />
-      )}
-      <text x="50" y="45" textAnchor="middle" fontSize="22" fontWeight="700" fontFamily="inherit" fill="currentColor">
-        {current}<tspan fontSize="12" fontWeight="600">%</tspan>
-      </text>
-      <text x="50" y="57" textAnchor="middle" fontSize="8" fontFamily="inherit" fill="#9ca3af">
-        SOC
-      </text>
-    </svg>
-  )
-}
 
 // ─── Performance ──────────────────────────────────────────────────────────────
 

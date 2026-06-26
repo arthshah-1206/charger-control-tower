@@ -201,7 +201,7 @@ export default function AnalyticsView() {
   }, [rows])
 
   const toggle = (num: string) =>
-    setExpanded(prev => { const s = new Set(prev); s.has(num) ? s.delete(num) : s.add(num); return s })
+    setExpanded(prev => { const s = new Set(prev); if (s.has(num)) s.delete(num); else s.add(num); return s })
 
   return (
     <div className="flex-1 overflow-y-auto custom-scrollbar bg-muted/30">

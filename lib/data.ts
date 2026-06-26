@@ -165,7 +165,8 @@ export const PACK_BUS_MAP: Record<string, string> = {
 }
 
 // TODO: replace with real Bytebeam session URL once format is confirmed
-export const bytebeamSessionUrl = (_sessionId: string): string => '#'
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const bytebeamSessionUrl = (_: string): string => '#'
 
 export const CHARGER_NOTIFICATIONS: ChargerNotification[] = [
   { id: 'cn1', chargerId: 'EXP-C-003', from: 'deration',  to: 'breakdown', time: '08:14' },

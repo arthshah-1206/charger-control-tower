@@ -533,16 +533,6 @@ function getFaultTree(chargerNum: string, subsystemId: string): FaultEquipment[]
   })
 }
 
-const HEALTH_PILL_CLS: Record<HealthStatus, string> = {
-  healthy:    'bg-emerald-50 text-emerald-700',
-  deration:   'bg-amber-50   text-amber-700',
-  breakdown:  'bg-red-50     text-red-700',
-  'grid-down': 'bg-sky-50    text-sky-700',
-}
-const HEALTH_LABEL: Record<HealthStatus, string> = {
-  healthy: 'Healthy', deration: 'Deration', breakdown: 'Breakdown', 'grid-down': 'On DG',
-}
-
 // ── Camera timeline scrubber ──────────────────────────────────────────────────
 
 const CAM_WINDOW_HOURS = 24
@@ -920,7 +910,7 @@ export default function ChargerSchematic({ chargerNum }: { chargerNum: string })
                     const expanded = expandedEquipment.has(equip.id)
                     const toggle = () => setExpandedEquipment(prev => {
                       const next = new Set(prev)
-                      expanded ? next.delete(equip.id) : next.add(equip.id)
+                      if (expanded) next.delete(equip.id); else next.add(equip.id)
                       return next
                     })
                     return (

@@ -13,7 +13,6 @@ function fmtTimer(secs: number) { return `${pad2(Math.floor(secs / 60))}:${pad2(
 
 export default function LiveSessionPanel({
   session,
-  charger,
   elapsed,
 }: {
   session: ChargingSession | null
