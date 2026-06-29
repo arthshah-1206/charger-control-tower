@@ -168,6 +168,22 @@ export const PACK_BUS_MAP: Record<string, string> = {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const bytebeamSessionUrl = (_: string): string => '#'
 
+// Operational availability metrics per charger (% of time in period)
+// Consistent with current health states: breakdown/grid-down chargers show low values
+export const CHARGER_AVAILABILITY: Record<string, {
+  chargerUptimePct: number   // % time charger was operational (not in breakdown/deration)
+  dataUptimePct: number      // % time IoT data was fresh
+  powerAvailPct: number      // % time grid power was available
+}> = {
+  '001': { chargerUptimePct: 98, dataUptimePct: 97, powerAvailPct: 99 },
+  '002': { chargerUptimePct: 42, dataUptimePct: 89, powerAvailPct: 38 }, // grid-down
+  '003': { chargerUptimePct: 34, dataUptimePct: 73, powerAvailPct: 96 }, // breakdown
+  '004': { chargerUptimePct: 88, dataUptimePct: 96, powerAvailPct: 97 }, // deration
+  '005': { chargerUptimePct: 28, dataUptimePct: 82, powerAvailPct: 93 }, // breakdown
+  '006': { chargerUptimePct: 99, dataUptimePct: 98, powerAvailPct: 100 },
+  '007': { chargerUptimePct: 97, dataUptimePct: 95, powerAvailPct: 99 },
+}
+
 export const CHARGER_NOTIFICATIONS: ChargerNotification[] = [
   { id: 'cn1', chargerId: 'EXP-C-003', from: 'deration',  to: 'breakdown', time: '08:14' },
   { id: 'cn2', chargerId: 'EXP-C-005', from: 'healthy',   to: 'breakdown', time: '11:22' },

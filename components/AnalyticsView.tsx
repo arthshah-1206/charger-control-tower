@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { ChevronDown, ChevronRight, Check, ExternalLink } from 'lucide-react'
-import { CHARGERS, CHARGER_SESSIONS, PACK_BUS_MAP, bytebeamSessionUrl } from '@/lib/data'
+import { CHARGERS, CHARGER_SESSIONS, CHARGER_AVAILABILITY, PACK_BUS_MAP, bytebeamSessionUrl } from '@/lib/data'
 import type { SessionRecord } from '@/lib/types'
 
 type Period = 'today' | 'week' | 'month' | 'custom'
@@ -28,11 +28,21 @@ function fromInput(s: string): Date | null {
 
 function inRange(d: Date, period: Period, customFrom: string, customTo: string): boolean {
   if (period === 'today') return d.getFullYear() === 2026 && d.getMonth() === 5 && d.getDate() === 25
-  if (period === 'week')  return d >= new Date(2026, 5, 23) && d <= new Date(2026, 5, 25, 23, 59)  // Mon 23 Jun – Thu 25 Jun
-  if (period === 'month') return d >= new Date(2026, 5, 1)  && d <= new Date(2026, 5, 25, 23, 59)  // 1 Jun – 25 Jun
+  if (period === 'week')  return d >= new Date(2026, 5, 23) && d <= new Date(2026, 5, 25, 23, 59)
+  if (period === 'month') return d >= new Date(2026, 5, 1)  && d <= new Date(2026, 5, 25, 23, 59)
   const f = fromInput(customFrom), t = fromInput(customTo)
   if (!f || !t) return false
   return d >= f && d <= new Date(t.getFullYear(), t.getMonth(), t.getDate(), 23, 59)
+}
+
+function periodMins(period: Period, customFrom: string, customTo: string): number {
+  if (period === 'today')  return 24 * 60
+  if (period === 'week')   return 3 * 24 * 60
+  if (period === 'month')  return 25 * 24 * 60
+  const f = fromInput(customFrom), t = fromInput(customTo)
+  if (!f || !t) return 24 * 60
+  const days = Math.max(1, Math.round((t.getTime() - f.getTime()) / 86400000) + 1)
+  return days * 24 * 60
 }
 
 function eff(s: SessionRecord): number | null {
@@ -45,24 +55,31 @@ function fmtDur(mins: number): string {
   return m === 0 ? `${h}h` : `${h}h ${m}m`
 }
 
-// RAG targets: charging time ≤25m = green, ≤35m = amber, >35m = red
-//              efficiency ≥85% = green, ≥75% = amber, <75% = red
+// RAG: charging time ≤25m green, ≤35m amber, >35m red
 function ragTime(mins: number | null): string {
   if (mins === null) return ''
   if (mins <= 25) return 'text-emerald-600'
   if (mins <= 35) return 'text-amber-600'
   return 'text-red-600'
 }
+// RAG: efficiency ≥85% green, ≥75% amber, <75% red
 function ragEff(pct: number | null): string {
   if (pct === null) return ''
   if (pct >= 85) return 'text-emerald-600'
   if (pct >= 75) return 'text-amber-600'
   return 'text-red-600'
 }
+// RAG: generic percentage with configurable thresholds (higher = better)
+function ragPct(pct: number | null, hi: number, lo: number): string {
+  if (pct === null) return ''
+  if (pct >= hi) return 'text-emerald-600'
+  if (pct >= lo) return 'text-amber-600'
+  return 'text-red-600'
+}
 
 const PRESET_LABELS: Record<Exclude<Period, 'custom'>, string> = {
   today: 'Today · 25 Jun 2026',
-  week:  '23 Jun – 25 Jun 2026',   // Mon–Thu this week
+  week:  '23 Jun – 25 Jun 2026',
   month: '1 Jun – 25 Jun 2026',
 }
 
@@ -175,6 +192,8 @@ export default function AnalyticsView() {
     return selectedNums.length === 0 ? base : base.filter(c => selectedNums.includes(c.num))
   }, [siteFiltered, selectedNums])
 
+  const pMins = useMemo(() => periodMins(period, customFrom, customTo), [period, customFrom, customTo])
+
   const rows = useMemo(() => visible.map(charger => {
     const sessions = (CHARGER_SESSIONS[charger.num] ?? []).filter(s => {
       const d = parseDate(s.date)
@@ -185,18 +204,37 @@ export default function AnalyticsView() {
     const avgMins = n > 0 ? Math.round(sessions.reduce((a, s) => a + s.durationMins, 0) / n) : null
     const effs = sessions.map(eff).filter((e): e is number => e !== null)
     const effVal = effs.length > 0 ? Math.round(effs.reduce((a, b) => a + b) / effs.length) : null
-    return { charger, sessions, totalEnergy, avgMins, effVal }
-  }), [visible, period, customFrom, customTo])
+    const successN = sessions.filter(s => s.status === 'success').length
+    const successRate = n > 0 ? Math.round((successN / n) * 100) : null
+    const totalChargingMins = sessions.reduce((a, s) => a + s.durationMins, 0)
+    const utilizationPct = Math.round(Math.min((totalChargingMins / pMins) * 100, 100))
+    const avail = CHARGER_AVAILABILITY[charger.num]
+    return {
+      charger, sessions, totalEnergy, avgMins, effVal, successRate, utilizationPct,
+      chargerUptimePct: avail?.chargerUptimePct ?? null,
+      dataUptimePct:    avail?.dataUptimePct    ?? null,
+      powerAvailPct:    avail?.powerAvailPct    ?? null,
+    }
+  }), [visible, period, customFrom, customTo, pMins])
 
   const agg = useMemo(() => {
     const all = rows.flatMap(r => r.sessions)
     const n = all.length
     const effs = all.map(eff).filter((e): e is number => e !== null)
+    const successN = all.filter(s => s.status === 'success').length
+    const withAvail = rows.filter(r => r.chargerUptimePct !== null)
+    const avgOf = (key: 'chargerUptimePct' | 'dataUptimePct' | 'powerAvailPct' | 'utilizationPct') =>
+      rows.length > 0 ? Math.round(rows.reduce((a, r) => a + (r[key] ?? 0), 0) / rows.length) : null
     return {
-      sessions: n,
-      avgMins:  n > 0 ? Math.round(all.reduce((a, s) => a + s.durationMins, 0) / n) : null,
-      energy:   all.reduce((a, s) => a + s.energySoldKwh, 0),
-      effVal:   effs.length > 0 ? Math.round(effs.reduce((a, b) => a + b) / effs.length) : null,
+      sessions:         n,
+      successRate:      n > 0 ? Math.round((successN / n) * 100) : null,
+      avgMins:          n > 0 ? Math.round(all.reduce((a, s) => a + s.durationMins, 0) / n) : null,
+      energy:           all.reduce((a, s) => a + s.energySoldKwh, 0),
+      effVal:           effs.length > 0 ? Math.round(effs.reduce((a, b) => a + b) / effs.length) : null,
+      chargerUptimePct: withAvail.length > 0 ? avgOf('chargerUptimePct') : null,
+      dataUptimePct:    withAvail.length > 0 ? avgOf('dataUptimePct')    : null,
+      powerAvailPct:    withAvail.length > 0 ? avgOf('powerAvailPct')    : null,
+      utilizationPct:   avgOf('utilizationPct'),
     }
   }, [rows])
 
@@ -209,7 +247,6 @@ export default function AnalyticsView() {
 
         {/* Controls */}
         <div className="flex items-center gap-3 flex-wrap">
-          {/* Period presets */}
           <div className="flex items-center gap-0.5 bg-background border border-border rounded-lg p-1">
             {PRESETS.map(({ p, label }) => (
               <button key={p} onClick={() => setPeriod(p)}
@@ -222,7 +259,6 @@ export default function AnalyticsView() {
             ))}
           </div>
 
-          {/* Date range label or custom inputs */}
           {period === 'custom' ? (
             <div className="flex items-center gap-2">
               <input
@@ -264,14 +300,16 @@ export default function AnalyticsView() {
           </div>
         </div>
 
-        {/* Aggregate bar */}
+        {/* Aggregate metrics card — two rows */}
         <div className="bg-background border border-border rounded-xl overflow-hidden">
-          <div className="grid grid-cols-4 divide-x divide-border">
+          {/* Row 1: session metrics */}
+          <div className="grid grid-cols-5 divide-x divide-border border-b border-border">
             {[
-              { label: 'Sessions',          value: String(agg.sessions),                            unit: '',                               color: ''                    },
-              { label: 'Avg charging time', value: agg.avgMins != null ? fmtDur(agg.avgMins) : '—', unit: '',                               color: ragTime(agg.avgMins) },
-              { label: 'Energy sold',       value: String(agg.energy),                              unit: 'kWh',                            color: ''                    },
-              { label: 'Avg efficiency',    value: agg.effVal != null ? `${agg.effVal}` : '—',      unit: agg.effVal != null ? '%' : '',    color: ragEff(agg.effVal)   },
+              { label: 'Sessions',          value: String(agg.sessions),                                      unit: '',   color: ''                                     },
+              { label: 'Session success',   value: agg.successRate != null ? `${agg.successRate}` : '—',      unit: agg.successRate != null ? '%' : '', color: ragPct(agg.successRate, 90, 75)   },
+              { label: 'Avg charging time', value: agg.avgMins != null ? fmtDur(agg.avgMins) : '—',           unit: '',   color: ragTime(agg.avgMins)                   },
+              { label: 'Energy sold',       value: String(agg.energy),                                        unit: 'kWh', color: ''                                    },
+              { label: 'Avg efficiency',    value: agg.effVal != null ? `${agg.effVal}` : '—',                unit: agg.effVal != null ? '%' : '',      color: ragEff(agg.effVal)                },
             ].map(({ label, value, unit, color }) => (
               <div key={label} className="px-6 py-4">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-text-secondary mb-1.5">{label}</p>
@@ -281,11 +319,27 @@ export default function AnalyticsView() {
               </div>
             ))}
           </div>
+          {/* Row 2: operational metrics */}
+          <div className="grid grid-cols-4 divide-x divide-border bg-muted/20">
+            {[
+              { label: 'Charger uptime',     value: agg.chargerUptimePct != null ? `${agg.chargerUptimePct}` : '—', unit: agg.chargerUptimePct != null ? '%' : '', color: ragPct(agg.chargerUptimePct, 95, 85) },
+              { label: 'Data uptime',        value: agg.dataUptimePct    != null ? `${agg.dataUptimePct}`    : '—', unit: agg.dataUptimePct    != null ? '%' : '', color: ragPct(agg.dataUptimePct,    95, 85) },
+              { label: 'Power availability', value: agg.powerAvailPct    != null ? `${agg.powerAvailPct}`    : '—', unit: agg.powerAvailPct    != null ? '%' : '', color: ragPct(agg.powerAvailPct,    95, 85) },
+              { label: 'Utilization',        value: agg.utilizationPct   != null ? `${agg.utilizationPct}`   : '—', unit: agg.utilizationPct   != null ? '%' : '', color: ''                                   },
+            ].map(({ label, value, unit, color }) => (
+              <div key={label} className="px-6 py-3">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-text-secondary mb-1">{label}</p>
+                <p className={`text-xl font-bold tabular-nums leading-none ${color || 'text-foreground'}`}>
+                  {value}<span className="text-sm font-normal text-text-secondary ml-1">{unit}</span>
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Per-charger rows */}
         <div className="flex flex-col gap-4">
-          {rows.map(({ charger, sessions, totalEnergy, avgMins, effVal }) => {
+          {rows.map(({ charger, sessions, totalEnergy, avgMins, effVal, successRate, utilizationPct, chargerUptimePct, dataUptimePct, powerAvailPct }) => {
             const isOpen = expanded.has(charger.num)
             const has = sessions.length > 0
             return (
@@ -302,21 +356,41 @@ export default function AnalyticsView() {
                     <span className="text-sm font-bold leading-tight">{charger.prefix}{charger.num}</span>
                     <span className="text-xs text-text-secondary mt-0.5">{charger.site}</span>
                   </div>
-                  <div className="ml-auto flex items-center gap-8">
+                  <div className="ml-auto flex items-center gap-5">
                     <div className="text-right">
                       <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Sessions</p>
                       <p className="text-sm font-bold tabular-nums">{sessions.length}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Avg charging time</p>
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Success</p>
+                      <p className={`text-sm font-bold tabular-nums ${ragPct(successRate, 90, 75)}`}>{successRate != null ? `${successRate}%` : '—'}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Uptime</p>
+                      <p className={`text-sm font-bold tabular-nums ${ragPct(chargerUptimePct, 95, 85)}`}>{chargerUptimePct != null ? `${chargerUptimePct}%` : '—'}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Data uptime</p>
+                      <p className={`text-sm font-bold tabular-nums ${ragPct(dataUptimePct, 95, 85)}`}>{dataUptimePct != null ? `${dataUptimePct}%` : '—'}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Pwr avail</p>
+                      <p className={`text-sm font-bold tabular-nums ${ragPct(powerAvailPct, 95, 85)}`}>{powerAvailPct != null ? `${powerAvailPct}%` : '—'}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Utilization</p>
+                      <p className="text-sm font-bold tabular-nums">{utilizationPct}%</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Avg time</p>
                       <p className={`text-sm font-bold tabular-nums ${ragTime(avgMins)}`}>{avgMins != null ? fmtDur(avgMins) : '—'}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Energy sold</p>
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Energy</p>
                       <p className="text-sm font-bold tabular-nums">{totalEnergy > 0 ? `${totalEnergy} kWh` : '—'}</p>
                     </div>
-                    <div className="text-right w-24">
-                      <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Avg efficiency</p>
+                    <div className="text-right">
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Efficiency</p>
                       <p className={`text-sm font-bold tabular-nums ${ragEff(effVal)}`}>{effVal != null ? `${effVal}%` : '—'}</p>
                     </div>
                   </div>
