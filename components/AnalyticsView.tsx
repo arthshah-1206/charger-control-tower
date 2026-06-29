@@ -302,22 +302,13 @@ export default function AnalyticsView() {
 
         {/* Aggregate metrics card — two rows */}
         <div className="bg-background border border-border rounded-xl overflow-hidden">
-          {/* Row 1: session performance — Sessions + success combined, then time / energy / efficiency */}
+          {/* Row 1: session performance */}
           <div className="grid grid-cols-4 divide-x divide-border border-b border-border">
-            {/* Sessions cell — success rate as sub-line */}
-            <div className="px-6 py-4">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-text-secondary mb-1.5">Sessions</p>
-              <p className="text-2xl font-bold tabular-nums leading-none text-foreground">{agg.sessions}</p>
-              {agg.successRate != null && (
-                <p className={`text-xs font-medium mt-1 ${ragPct(agg.successRate, 90, 75)}`}>
-                  {agg.successRate}% success
-                </p>
-              )}
-            </div>
             {[
-              { label: 'Avg charging time', value: agg.avgMins != null ? fmtDur(agg.avgMins) : '—', unit: '',    color: ragTime(agg.avgMins) },
-              { label: 'Energy sold',       value: String(agg.energy),                               unit: 'kWh', color: ''                  },
-              { label: 'Avg efficiency',    value: agg.effVal != null ? `${agg.effVal}` : '—',       unit: agg.effVal != null ? '%' : '',  color: ragEff(agg.effVal) },
+              { label: 'Sessions',          value: String(agg.sessions),                                   unit: '',    color: ''                  },
+              { label: 'Avg charging time', value: agg.avgMins != null ? fmtDur(agg.avgMins) : '—',        unit: '',    color: ragTime(agg.avgMins) },
+              { label: 'Energy sold',       value: String(agg.energy),                                     unit: 'kWh', color: ''                  },
+              { label: 'Avg efficiency',    value: agg.effVal != null ? `${agg.effVal}` : '—',             unit: agg.effVal != null ? '%' : '',  color: ragEff(agg.effVal) },
             ].map(({ label, value, unit, color }) => (
               <div key={label} className="px-6 py-4">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-text-secondary mb-1.5">{label}</p>
@@ -330,14 +321,14 @@ export default function AnalyticsView() {
           {/* Row 2: operational metrics */}
           <div className="grid grid-cols-4 divide-x divide-border bg-muted/20">
             {[
+              { label: 'Session success',    value: agg.successRate      != null ? `${agg.successRate}`      : '—', unit: agg.successRate      != null ? '%' : '', color: ragPct(agg.successRate,      90, 75) },
               { label: 'Charger uptime',     value: agg.chargerUptimePct != null ? `${agg.chargerUptimePct}` : '—', unit: agg.chargerUptimePct != null ? '%' : '', color: ragPct(agg.chargerUptimePct, 95, 85) },
               { label: 'Data uptime',        value: agg.dataUptimePct    != null ? `${agg.dataUptimePct}`    : '—', unit: agg.dataUptimePct    != null ? '%' : '', color: ragPct(agg.dataUptimePct,    95, 85) },
               { label: 'Power availability', value: agg.powerAvailPct    != null ? `${agg.powerAvailPct}`    : '—', unit: agg.powerAvailPct    != null ? '%' : '', color: ragPct(agg.powerAvailPct,    95, 85) },
-              { label: 'Utilization',        value: agg.utilizationPct   != null ? `${agg.utilizationPct}`   : '—', unit: agg.utilizationPct   != null ? '%' : '', color: ''                                   },
             ].map(({ label, value, unit, color }) => (
-              <div key={label} className="px-6 py-3">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-text-secondary mb-1">{label}</p>
-                <p className={`text-xl font-bold tabular-nums leading-none ${color || 'text-foreground'}`}>
+              <div key={label} className="px-6 py-4">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-text-secondary mb-1.5">{label}</p>
+                <p className={`text-2xl font-bold tabular-nums leading-none ${color || 'text-foreground'}`}>
                   {value}<span className="text-sm font-normal text-text-secondary ml-1">{unit}</span>
                 </p>
               </div>
@@ -368,9 +359,10 @@ export default function AnalyticsView() {
                     <div className="text-right">
                       <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Sessions</p>
                       <p className="text-sm font-bold tabular-nums">{sessions.length}</p>
-                      {successRate != null && (
-                        <p className={`text-[10px] font-medium ${ragPct(successRate, 90, 75)}`}>{successRate}% success</p>
-                      )}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Success</p>
+                      <p className={`text-sm font-bold tabular-nums ${ragPct(successRate, 90, 75)}`}>{successRate != null ? `${successRate}%` : '—'}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Uptime</p>
