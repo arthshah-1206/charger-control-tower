@@ -302,14 +302,22 @@ export default function AnalyticsView() {
 
         {/* Aggregate metrics card — two rows */}
         <div className="bg-background border border-border rounded-xl overflow-hidden">
-          {/* Row 1: session metrics */}
-          <div className="grid grid-cols-5 divide-x divide-border border-b border-border">
+          {/* Row 1: session performance — Sessions + success combined, then time / energy / efficiency */}
+          <div className="grid grid-cols-4 divide-x divide-border border-b border-border">
+            {/* Sessions cell — success rate as sub-line */}
+            <div className="px-6 py-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-text-secondary mb-1.5">Sessions</p>
+              <p className="text-2xl font-bold tabular-nums leading-none text-foreground">{agg.sessions}</p>
+              {agg.successRate != null && (
+                <p className={`text-xs font-medium mt-1 ${ragPct(agg.successRate, 90, 75)}`}>
+                  {agg.successRate}% success
+                </p>
+              )}
+            </div>
             {[
-              { label: 'Sessions',          value: String(agg.sessions),                                      unit: '',   color: ''                                     },
-              { label: 'Session success',   value: agg.successRate != null ? `${agg.successRate}` : '—',      unit: agg.successRate != null ? '%' : '', color: ragPct(agg.successRate, 90, 75)   },
-              { label: 'Avg charging time', value: agg.avgMins != null ? fmtDur(agg.avgMins) : '—',           unit: '',   color: ragTime(agg.avgMins)                   },
-              { label: 'Energy sold',       value: String(agg.energy),                                        unit: 'kWh', color: ''                                    },
-              { label: 'Avg efficiency',    value: agg.effVal != null ? `${agg.effVal}` : '—',                unit: agg.effVal != null ? '%' : '',      color: ragEff(agg.effVal)                },
+              { label: 'Avg charging time', value: agg.avgMins != null ? fmtDur(agg.avgMins) : '—', unit: '',    color: ragTime(agg.avgMins) },
+              { label: 'Energy sold',       value: String(agg.energy),                               unit: 'kWh', color: ''                  },
+              { label: 'Avg efficiency',    value: agg.effVal != null ? `${agg.effVal}` : '—',       unit: agg.effVal != null ? '%' : '',  color: ragEff(agg.effVal) },
             ].map(({ label, value, unit, color }) => (
               <div key={label} className="px-6 py-4">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-text-secondary mb-1.5">{label}</p>
@@ -339,7 +347,7 @@ export default function AnalyticsView() {
 
         {/* Per-charger rows */}
         <div className="flex flex-col gap-4">
-          {rows.map(({ charger, sessions, totalEnergy, avgMins, effVal, successRate, utilizationPct, chargerUptimePct, dataUptimePct, powerAvailPct }) => {
+          {rows.map(({ charger, sessions, totalEnergy, avgMins, effVal, successRate, chargerUptimePct }) => {
             const isOpen = expanded.has(charger.num)
             const has = sessions.length > 0
             return (
@@ -356,30 +364,17 @@ export default function AnalyticsView() {
                     <span className="text-sm font-bold leading-tight">{charger.prefix}{charger.num}</span>
                     <span className="text-xs text-text-secondary mt-0.5">{charger.site}</span>
                   </div>
-                  <div className="ml-auto flex items-center gap-5">
+                  <div className="ml-auto flex items-center gap-8">
                     <div className="text-right">
                       <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Sessions</p>
                       <p className="text-sm font-bold tabular-nums">{sessions.length}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Success</p>
-                      <p className={`text-sm font-bold tabular-nums ${ragPct(successRate, 90, 75)}`}>{successRate != null ? `${successRate}%` : '—'}</p>
+                      {successRate != null && (
+                        <p className={`text-[10px] font-medium ${ragPct(successRate, 90, 75)}`}>{successRate}% success</p>
+                      )}
                     </div>
                     <div className="text-right">
                       <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Uptime</p>
                       <p className={`text-sm font-bold tabular-nums ${ragPct(chargerUptimePct, 95, 85)}`}>{chargerUptimePct != null ? `${chargerUptimePct}%` : '—'}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Data uptime</p>
-                      <p className={`text-sm font-bold tabular-nums ${ragPct(dataUptimePct, 95, 85)}`}>{dataUptimePct != null ? `${dataUptimePct}%` : '—'}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Pwr avail</p>
-                      <p className={`text-sm font-bold tabular-nums ${ragPct(powerAvailPct, 95, 85)}`}>{powerAvailPct != null ? `${powerAvailPct}%` : '—'}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Utilization</p>
-                      <p className="text-sm font-bold tabular-nums">{utilizationPct}%</p>
                     </div>
                     <div className="text-right">
                       <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Avg time</p>
@@ -389,7 +384,7 @@ export default function AnalyticsView() {
                       <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Energy</p>
                       <p className="text-sm font-bold tabular-nums">{totalEnergy > 0 ? `${totalEnergy} kWh` : '—'}</p>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right w-20">
                       <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Efficiency</p>
                       <p className={`text-sm font-bold tabular-nums ${ragEff(effVal)}`}>{effVal != null ? `${effVal}%` : '—'}</p>
                     </div>
