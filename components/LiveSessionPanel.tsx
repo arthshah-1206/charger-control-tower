@@ -43,7 +43,7 @@ export default function LiveSessionPanel({
         <div>
           <div className="flex items-center gap-2">
             <p className="text-base font-bold tracking-tight [:fullscreen_&]:text-2xl">{ls.sessionId}</p>
-            <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-muted text-text-secondary border border-border">Last Session</span>
+            <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-muted text-text-secondary border border-border">Last</span>
           </div>
           <p className="text-xs text-text-secondary tabular-nums mt-0.5 [:fullscreen_&]:text-base">{ls.date}</p>
         </div>
@@ -120,7 +120,7 @@ export default function LiveSessionPanel({
       <div>
         <div className="flex items-center gap-2">
           <p className="text-base font-bold tracking-tight [:fullscreen_&]:text-2xl">{session.sessionId}</p>
-          <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">Live</span>
+          <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">Active</span>
         </div>
         <p className="text-xs text-text-secondary tabular-nums mt-0.5 [:fullscreen_&]:text-base">
           {fmtClock(startTime)} → {nowStr}
