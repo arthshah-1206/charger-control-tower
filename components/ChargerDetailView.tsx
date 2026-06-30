@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { MapPin, Video, ExternalLink } from 'lucide-react'
+import { MapPin, Video, ExternalLink, Maximize2 } from 'lucide-react'
 import type { Charger } from '@/lib/types'
 import { CHARGER_DETAIL_DATA, CHARGER_SESSIONS, LIVE_SESSIONS, PACK_BUS_MAP, bytebeamSessionUrl } from '@/lib/data'
 import { OperatorDisplay } from './operator-display/OperatorDisplay'
@@ -268,7 +268,16 @@ export default function ChargerDetailView({
 }) {
   const [activeSection, setActiveSection] = useState('sec-info')
   const [sessionDateFilter, setSessionDateFilter] = useState<string>(() => new Date().toISOString().split('T')[0])
-  const scrollRef = useRef<HTMLDivElement>(null)
+  const scrollRef      = useRef<HTMLDivElement>(null)
+  const opDisplayRef   = useRef<HTMLDivElement>(null)
+  const livePanelRef   = useRef<HTMLDivElement>(null)
+  const healthRef      = useRef<HTMLDivElement>(null)
+
+  const toggleFullscreen = (el: HTMLElement | null) => {
+    if (!el) return
+    if (document.fullscreenElement === el) document.exitFullscreen()
+    else el.requestFullscreen()
+  }
 
   const liveSession = LIVE_SESSIONS[charger.num] ?? null
   const [elapsed, setElapsed] = useState(() => (liveSession?.durationMins ?? 0) * 60)
@@ -379,8 +388,14 @@ export default function ChargerDetailView({
                 <div className="px-5 py-4 border-b border-border flex items-center gap-3">
                   <span className="text-base font-semibold">Charger health</span>
                   <HealthPill status={charger.health} derationPct={charger.derationPct} />
+                  <button onClick={() => toggleFullscreen(healthRef.current)} title="Fullscreen"
+                    className="ml-auto p-1.5 rounded-md text-text-secondary hover:text-foreground hover:bg-muted transition-colors cursor-pointer">
+                    <Maximize2 size={14} />
+                  </button>
                 </div>
-                <ChargerSchematic chargerNum={charger.num} />
+                <div ref={healthRef} className="[&:fullscreen]:bg-background [&:fullscreen]:overflow-y-auto">
+                  <ChargerSchematic chargerNum={charger.num} />
+                </div>
               </div>
             </section>
 
@@ -397,10 +412,18 @@ export default function ChargerDetailView({
                       <span className="text-base font-semibold">Live session</span>
                     </div>
                     <div className="flex divide-x divide-border" style={{ height: 480 }}>
-                      <div className="w-[380px] shrink-0 bg-neutral-100">
+                      <div ref={opDisplayRef} className="relative w-[380px] shrink-0 bg-neutral-100 [&:fullscreen]:bg-neutral-100">
+                        <button onClick={() => toggleFullscreen(opDisplayRef.current)} title="Fullscreen"
+                          className="absolute top-2 right-2 z-10 p-1.5 rounded-md bg-background/70 hover:bg-background text-foreground/60 hover:text-foreground border border-border/40 transition-colors cursor-pointer">
+                          <Maximize2 size={13} />
+                        </button>
                         <OperatorDisplay screen={screen} />
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div ref={livePanelRef} className="relative flex-1 min-w-0 [&:fullscreen]:bg-background [&:fullscreen]:overflow-y-auto [&:fullscreen]:p-16">
+                        <button onClick={() => toggleFullscreen(livePanelRef.current)} title="Fullscreen"
+                          className="absolute top-2 right-2 z-10 p-1.5 rounded-md bg-background/70 hover:bg-background text-foreground/60 hover:text-foreground border border-border/40 transition-colors cursor-pointer">
+                          <Maximize2 size={13} />
+                        </button>
                         <LiveSessionPanel session={liveSession} charger={charger} elapsed={elapsed} />
                       </div>
                     </div>

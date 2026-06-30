@@ -26,23 +26,15 @@ function fromInput(s: string): Date | null {
   return new Date(y, mo - 1, d)
 }
 
-function inRange(d: Date, period: Period, customFrom: string, customTo: string): boolean {
-  if (period === 'today') return d.getFullYear() === 2026 && d.getMonth() === 5 && d.getDate() === 25
-  if (period === 'week')  return d >= new Date(2026, 5, 23) && d <= new Date(2026, 5, 25, 23, 59)
-  if (period === 'month') return d >= new Date(2026, 5, 1)  && d <= new Date(2026, 5, 25, 23, 59)
-  const f = fromInput(customFrom), t = fromInput(customTo)
-  if (!f || !t) return false
-  return d >= f && d <= new Date(t.getFullYear(), t.getMonth(), t.getDate(), 23, 59)
+function toInputStr(d: Date): string {
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${m}-${day}`
 }
 
-function periodMins(period: Period, customFrom: string, customTo: string): number {
-  if (period === 'today')  return 24 * 60
-  if (period === 'week')   return 3 * 24 * 60
-  if (period === 'month')  return 25 * 24 * 60
-  const f = fromInput(customFrom), t = fromInput(customTo)
-  if (!f || !t) return 24 * 60
-  const days = Math.max(1, Math.round((t.getTime() - f.getTime()) / 86400000) + 1)
-  return days * 24 * 60
+const MON_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+function fmtDate(d: Date): string {
+  return `${d.getDate()} ${MON_NAMES[d.getMonth()]} ${d.getFullYear()}`
 }
 
 function eff(s: SessionRecord): number | null {
@@ -75,12 +67,6 @@ function ragPct(pct: number | null, hi: number, lo: number): string {
   if (pct >= hi) return 'text-emerald-600'
   if (pct >= lo) return 'text-amber-600'
   return 'text-red-600'
-}
-
-const PRESET_LABELS: Record<Exclude<Period, 'custom'>, string> = {
-  today: 'Today · 25 Jun 2026',
-  week:  '23 Jun – 25 Jun 2026',
-  month: '1 Jun – 25 Jun 2026',
 }
 
 const PRESETS: { p: Period; label: string }[] = [
@@ -163,9 +149,14 @@ function MultiSelectDropdown({ items, selected, onChange, allLabel, renderItem }
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function AnalyticsView() {
+  const [now] = useState(() => new Date())
+
   const [period, setPeriod] = useState<Period>('today')
-  const [customFrom, setCustomFrom] = useState('2026-06-01')
-  const [customTo, setCustomTo]     = useState('2026-06-25')
+  const [customFrom, setCustomFrom] = useState(() => {
+    const d = new Date(now.getFullYear(), now.getMonth(), 1)
+    return toInputStr(d)
+  })
+  const [customTo, setCustomTo] = useState(() => toInputStr(now))
   const [selectedSites, setSelectedSites] = useState<string[]>([])
   const [selectedNums, setSelectedNums] = useState<string[]>([])
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
@@ -192,12 +183,40 @@ export default function AnalyticsView() {
     return selectedNums.length === 0 ? base : base.filter(c => selectedNums.includes(c.num))
   }, [siteFiltered, selectedNums])
 
-  const pMins = useMemo(() => periodMins(period, customFrom, customTo), [period, customFrom, customTo])
+  // Dynamic period range derived from now — no hardcoded dates
+  const periodRange = useMemo(() => {
+    const y = now.getFullYear(), mo = now.getMonth(), d = now.getDate()
+    const end = new Date(y, mo, d, 23, 59)
+    if (period === 'today') return { start: new Date(y, mo, d), end }
+    if (period === 'week') {
+      const diff = now.getDay() === 0 ? 6 : now.getDay() - 1  // days since Monday
+      return { start: new Date(y, mo, d - diff), end }
+    }
+    if (period === 'month') return { start: new Date(y, mo, 1), end }
+    const f = fromInput(customFrom), t = fromInput(customTo)
+    if (!f || !t) return null
+    return { start: f, end: new Date(t.getFullYear(), t.getMonth(), t.getDate(), 23, 59) }
+  }, [now, period, customFrom, customTo])
+
+  const pMins = useMemo(() => {
+    if (!periodRange) return 24 * 60
+    const days = Math.max(1, Math.ceil((periodRange.end.getTime() - periodRange.start.getTime()) / 86400000))
+    return days * 24 * 60
+  }, [periodRange])
+
+  const presetLabel = useMemo(() => {
+    if (!periodRange) return ''
+    if (period === 'today') return `Today · ${fmtDate(now)}`
+    if (period === 'week')  return `${fmtDate(periodRange.start)} – ${fmtDate(now)}`
+    if (period === 'month') return `${fmtDate(periodRange.start)} – ${fmtDate(now)}`
+    return ''
+  }, [period, periodRange, now])
 
   const rows = useMemo(() => visible.map(charger => {
     const sessions = (CHARGER_SESSIONS[charger.num] ?? []).filter(s => {
+      if (!periodRange) return false
       const d = parseDate(s.date)
-      return d !== null && inRange(d, period, customFrom, customTo)
+      return d !== null && d >= periodRange.start && d <= periodRange.end
     })
     const n = sessions.length
     const totalEnergy = sessions.reduce((a, s) => a + s.energySoldKwh, 0)
@@ -215,7 +234,7 @@ export default function AnalyticsView() {
       dataUptimePct:    avail?.dataUptimePct    ?? null,
       powerAvailPct:    avail?.powerAvailPct    ?? null,
     }
-  }), [visible, period, customFrom, customTo, pMins])
+  }), [visible, periodRange, pMins])
 
   const agg = useMemo(() => {
     const all = rows.flatMap(r => r.sessions)
@@ -279,7 +298,7 @@ export default function AnalyticsView() {
               />
             </div>
           ) : (
-            <span className="text-xs text-text-secondary">{PRESET_LABELS[period]}</span>
+            <span className="text-xs text-text-secondary">{presetLabel}</span>
           )}
 
           <div className="ml-auto flex items-center gap-2">
@@ -302,13 +321,19 @@ export default function AnalyticsView() {
 
         {/* Aggregate metrics card — two rows */}
         <div className="bg-background border border-border rounded-xl overflow-hidden">
-          {/* Row 1: session performance */}
+          {/* Row 1: session performance — success rate as sub-line under sessions */}
           <div className="grid grid-cols-4 divide-x divide-border border-b border-border">
+            <div className="px-6 py-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-text-secondary mb-1.5">Sessions</p>
+              <p className="text-2xl font-bold tabular-nums leading-none text-foreground">{agg.sessions}</p>
+              {agg.successRate != null && (
+                <p className={`text-xs font-medium mt-1 ${ragPct(agg.successRate, 90, 75)}`}>{agg.successRate}% success</p>
+              )}
+            </div>
             {[
-              { label: 'Sessions',          value: String(agg.sessions),                                   unit: '',    color: ''                  },
-              { label: 'Avg charging time', value: agg.avgMins != null ? fmtDur(agg.avgMins) : '—',        unit: '',    color: ragTime(agg.avgMins) },
-              { label: 'Energy sold',       value: String(agg.energy),                                     unit: 'kWh', color: ''                  },
-              { label: 'Avg efficiency',    value: agg.effVal != null ? `${agg.effVal}` : '—',             unit: agg.effVal != null ? '%' : '',  color: ragEff(agg.effVal) },
+              { label: 'Avg charging time', value: agg.avgMins != null ? fmtDur(agg.avgMins) : '—', unit: '',    color: ragTime(agg.avgMins) },
+              { label: 'Energy sold',       value: String(agg.energy),                               unit: 'kWh', color: ''                  },
+              { label: 'Avg efficiency',    value: agg.effVal != null ? `${agg.effVal}` : '—',       unit: agg.effVal != null ? '%' : '', color: ragEff(agg.effVal) },
             ].map(({ label, value, unit, color }) => (
               <div key={label} className="px-6 py-4">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-text-secondary mb-1.5">{label}</p>
@@ -321,10 +346,10 @@ export default function AnalyticsView() {
           {/* Row 2: operational metrics */}
           <div className="grid grid-cols-4 divide-x divide-border bg-muted/20">
             {[
-              { label: 'Session success',    value: agg.successRate      != null ? `${agg.successRate}`      : '—', unit: agg.successRate      != null ? '%' : '', color: ragPct(agg.successRate,      90, 75) },
               { label: 'Charger uptime',     value: agg.chargerUptimePct != null ? `${agg.chargerUptimePct}` : '—', unit: agg.chargerUptimePct != null ? '%' : '', color: ragPct(agg.chargerUptimePct, 95, 85) },
               { label: 'Data uptime',        value: agg.dataUptimePct    != null ? `${agg.dataUptimePct}`    : '—', unit: agg.dataUptimePct    != null ? '%' : '', color: ragPct(agg.dataUptimePct,    95, 85) },
               { label: 'Power availability', value: agg.powerAvailPct    != null ? `${agg.powerAvailPct}`    : '—', unit: agg.powerAvailPct    != null ? '%' : '', color: ragPct(agg.powerAvailPct,    95, 85) },
+              { label: 'Utilization',        value: agg.utilizationPct   != null ? `${agg.utilizationPct}`   : '—', unit: agg.utilizationPct   != null ? '%' : '', color: ''                                   },
             ].map(({ label, value, unit, color }) => (
               <div key={label} className="px-6 py-4">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-text-secondary mb-1.5">{label}</p>
@@ -338,7 +363,7 @@ export default function AnalyticsView() {
 
         {/* Per-charger rows */}
         <div className="flex flex-col gap-4">
-          {rows.map(({ charger, sessions, totalEnergy, avgMins, effVal, successRate, chargerUptimePct }) => {
+          {rows.map(({ charger, sessions, totalEnergy, avgMins, effVal, successRate, utilizationPct, chargerUptimePct, dataUptimePct }) => {
             const isOpen = expanded.has(charger.num)
             const has = sessions.length > 0
             return (
@@ -355,28 +380,36 @@ export default function AnalyticsView() {
                     <span className="text-sm font-bold leading-tight">{charger.prefix}{charger.num}</span>
                     <span className="text-xs text-text-secondary mt-0.5">{charger.site}</span>
                   </div>
-                  <div className="ml-auto flex items-center gap-8">
-                    <div className="text-right">
+                  <div className="ml-auto flex items-center gap-6">
+                    <div className="text-right w-12 shrink-0">
                       <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Sessions</p>
                       <p className="text-sm font-bold tabular-nums">{sessions.length}</p>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right w-14 shrink-0">
                       <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Success</p>
                       <p className={`text-sm font-bold tabular-nums ${ragPct(successRate, 90, 75)}`}>{successRate != null ? `${successRate}%` : '—'}</p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Uptime</p>
+                    <div className="text-right w-[88px] shrink-0">
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Charger uptime</p>
                       <p className={`text-sm font-bold tabular-nums ${ragPct(chargerUptimePct, 95, 85)}`}>{chargerUptimePct != null ? `${chargerUptimePct}%` : '—'}</p>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right w-[68px] shrink-0">
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Data uptime</p>
+                      <p className={`text-sm font-bold tabular-nums ${ragPct(dataUptimePct, 95, 85)}`}>{dataUptimePct != null ? `${dataUptimePct}%` : '—'}</p>
+                    </div>
+                    <div className="text-right w-[72px] shrink-0">
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Utilization</p>
+                      <p className="text-sm font-bold tabular-nums">{utilizationPct}%</p>
+                    </div>
+                    <div className="text-right w-16 shrink-0">
                       <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Avg time</p>
                       <p className={`text-sm font-bold tabular-nums ${ragTime(avgMins)}`}>{avgMins != null ? fmtDur(avgMins) : '—'}</p>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right w-20 shrink-0">
                       <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Energy</p>
                       <p className="text-sm font-bold tabular-nums">{totalEnergy > 0 ? `${totalEnergy} kWh` : '—'}</p>
                     </div>
-                    <div className="text-right w-20">
+                    <div className="text-right w-[68px] shrink-0">
                       <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Efficiency</p>
                       <p className={`text-sm font-bold tabular-nums ${ragEff(effVal)}`}>{effVal != null ? `${effVal}%` : '—'}</p>
                     </div>
