@@ -279,7 +279,8 @@ export default function ChargerDetailView({
     else el.requestFullscreen()
   }
 
-  const liveSession = LIVE_SESSIONS[charger.num] ?? null
+  const liveSession  = LIVE_SESSIONS[charger.num] ?? null
+  const lastSession  = CHARGER_SESSIONS[charger.num]?.[0] ?? null
   const [elapsed, setElapsed] = useState(() => (liveSession?.durationMins ?? 0) * 60)
   useEffect(() => {
     if (!liveSession) return
@@ -424,7 +425,7 @@ export default function ChargerDetailView({
                           className="absolute top-2 right-2 z-10 p-1.5 rounded-md bg-background/70 hover:bg-background text-foreground/60 hover:text-foreground border border-border/40 transition-colors cursor-pointer">
                           <Maximize2 size={13} />
                         </button>
-                        <LiveSessionPanel session={liveSession} charger={charger} elapsed={elapsed} />
+                        <LiveSessionPanel session={liveSession} charger={charger} elapsed={elapsed} lastSession={lastSession} />
                       </div>
                     </div>
                   </div>
