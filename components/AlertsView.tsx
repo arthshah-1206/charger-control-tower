@@ -148,20 +148,16 @@ export default function AlertsView() {
                         </Link>
                         <span className="text-[11px] text-text-secondary">{c.site} · {c.corridor}</span>
                         <HealthPill status={c.health} derationPct={c.derationPct} />
-                        {faults.length > 0 && (
-                          <>
-                            <span className="w-px h-3.5 bg-border shrink-0" />
-                            <span className="text-[11px] text-text-secondary">
-                              {faults.length} {faults.length === 1 ? 'fault' : 'faults'}
-                            </span>
-                          </>
-                        )}
+                        <span className="w-px h-3.5 bg-border shrink-0" />
+                        <span className="text-[11px] text-text-secondary">
+                          {faults.length} {faults.length === 1 ? 'error' : 'errors'}
+                        </span>
                       </div>
 
                       {isOpen && (
                         faults.length === 0 ? (
                           <div className="px-4 py-3 text-xs text-text-secondary border-t border-border">
-                            No active fault codes
+                            No active error codes
                           </div>
                         ) : (
                           <table className="w-full text-xs border-t border-border table-fixed">
