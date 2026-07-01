@@ -25,7 +25,7 @@ interface SubsystemDef {
   gunStatus?: { label: string; value: string }[]
 }
 
-interface ChargerFault {
+export interface ChargerFault {
   dtc: string
   name: string
   subsystem: string    // human-readable, shown in table
@@ -245,7 +245,7 @@ export const CHARGER_HEALTH: Record<string, Record<string, HealthStatus>> = {
 
 // ── Fault data ─────────────────────────────────────────────────────────────────
 
-const ACTIVE_FAULTS: Record<string, ChargerFault[]> = {
+export const ACTIVE_FAULTS: Record<string, ChargerFault[]> = {
   '003': [
     { dtc: '0x05 20', name: 'Post Contactor Weld Fault',       subsystem: 'Post',       subsystemId: 'post',      opsImpact: 'Breakdown', ticketId: 'SVC-2026-0842', reportedAt: '04 Jun 2026, 09:14' },
     { dtc: '0x03 12', name: 'Pile 3 IGBT Over-temperature',    subsystem: 'Pile 3',     subsystemId: 'pile3',     opsImpact: 'Breakdown', ticketId: 'SVC-2026-0841', reportedAt: '04 Jun 2026, 08:52' },

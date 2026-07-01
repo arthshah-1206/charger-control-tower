@@ -2,17 +2,19 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { Map, List, Bell, User, BarChart2, Layers } from 'lucide-react'
+import { Map, List, Bell, User, BarChart2, Layers, TriangleAlert } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import type { LucideIcon } from 'lucide-react'
-import { CHARGER_NOTIFICATIONS } from '@/lib/data'
+import { CHARGER_NOTIFICATIONS, CHARGERS } from '@/lib/data'
 import type { HealthStatus } from '@/lib/types'
 
 export type View = 'map' | 'list'
+export type MainTab = 'fleet' | 'analytics' | 'alerts'
 
-const MAIN_NAV: { tab: 'fleet' | 'analytics'; icon: LucideIcon; label: string }[] = [
-  { tab: 'fleet',     icon: Layers,    label: 'Network'   },
-  { tab: 'analytics', icon: BarChart2, label: 'Analytics' },
+const MAIN_NAV: { tab: MainTab; icon: LucideIcon; label: string }[] = [
+  { tab: 'fleet',     icon: Layers,        label: 'Network'   },
+  { tab: 'analytics', icon: BarChart2,     label: 'Analytics' },
+  { tab: 'alerts',    icon: TriangleAlert, label: 'Alerts'    },
 ]
 
 const VIEW_NAV: { view: View; icon: LucideIcon; label: string }[] = [
@@ -114,8 +116,8 @@ export default function Sidebar({
   currentView,
   onViewChange,
 }: {
-  mainTab: 'fleet' | 'analytics'
-  onMainTabChange: (tab: 'fleet' | 'analytics') => void
+  mainTab: MainTab
+  onMainTabChange: (tab: MainTab) => void
   currentView: View
   onViewChange: (v: View) => void
 }) {
@@ -127,21 +129,29 @@ export default function Sidebar({
       </div>
 
       <nav className="flex-1 pt-3 px-2 flex flex-col gap-0.5">
-        {MAIN_NAV.map(({ tab, icon: Icon, label }) => (
-          <button
-            key={tab}
-            onClick={() => onMainTabChange(tab)}
-            className={[
-              'w-full flex items-center gap-2.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-colors cursor-pointer',
-              mainTab === tab
-                ? 'bg-foreground text-white'
-                : 'text-text-secondary hover:bg-muted hover:text-foreground',
-            ].join(' ')}
-          >
-            <Icon size={14} className="shrink-0" />
-            {label}
-          </button>
-        ))}
+        {MAIN_NAV.map(({ tab, icon: Icon, label }) => {
+          const alertCount = tab === 'alerts' ? CHARGERS.filter(c => c.health !== 'healthy').length : 0
+          return (
+            <button
+              key={tab}
+              onClick={() => onMainTabChange(tab)}
+              className={[
+                'w-full flex items-center gap-2.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-colors cursor-pointer',
+                mainTab === tab
+                  ? 'bg-foreground text-white'
+                  : 'text-text-secondary hover:bg-muted hover:text-foreground',
+              ].join(' ')}
+            >
+              <Icon size={14} className="shrink-0" />
+              {label}
+              {alertCount > 0 && (
+                <span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full ${mainTab === tab ? 'bg-white/20 text-white' : 'bg-red-100 text-red-700'}`}>
+                  {alertCount}
+                </span>
+              )}
+            </button>
+          )
+        })}
 
         {mainTab === 'fleet' && (
           <>

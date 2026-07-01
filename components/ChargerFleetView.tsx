@@ -6,10 +6,11 @@ import { Loader2 } from 'lucide-react'
 import { CHARGERS } from '@/lib/data'
 import type { HealthStatus } from '@/lib/types'
 import TopNav, { type HealthFilter } from './TopNav'
-import Sidebar, { type View } from './Sidebar'
+import Sidebar, { type View, type MainTab } from './Sidebar'
 import ChargerList from './ChargerList'
 import ChargerCard from './ChargerCard'
 import AnalyticsView from './AnalyticsView'
+import AlertsView from './AlertsView'
 
 const ChargerMap = dynamic(() => import('./ChargerMap'), {
   ssr: false,
@@ -26,7 +27,7 @@ const ChargerMap = dynamic(() => import('./ChargerMap'), {
 const HEALTH_ORDER: Record<HealthStatus, number> = { breakdown: 0, 'grid-down': 1, deration: 2, healthy: 3 }
 
 export default function ChargerFleetView() {
-  const [mainTab, setMainTab] = useState<'fleet' | 'analytics'>('fleet')
+  const [mainTab, setMainTab] = useState<MainTab>('fleet')
   const [currentView, setCurrentView] = useState<View>('map')
   const [activeFilter, setActiveFilter] = useState<HealthFilter>('all')
   const [activeCorridor, setActiveCorridor] = useState('')
@@ -116,6 +117,8 @@ export default function ChargerFleetView() {
       <div className="flex flex-col flex-1 overflow-hidden">
         {mainTab === 'analytics' ? (
           <AnalyticsView />
+        ) : mainTab === 'alerts' ? (
+          <AlertsView />
         ) : (
           <>
             <TopNav
