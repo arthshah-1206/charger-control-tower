@@ -261,7 +261,7 @@ export default function AnalyticsView() {
     setExpanded(prev => { const s = new Set(prev); if (s.has(num)) s.delete(num); else s.add(num); return s })
 
   return (
-    <div className="flex-1 overflow-y-auto custom-scrollbar bg-muted/30">
+    <div className="flex-1 overflow-y-auto custom-scrollbar bg-background">
       <div className="max-w-[1100px] mx-auto px-6 py-6 flex flex-col gap-5">
 
         {/* Controls */}
