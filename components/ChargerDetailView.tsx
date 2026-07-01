@@ -269,8 +269,7 @@ export default function ChargerDetailView({
   const [activeSection, setActiveSection] = useState('sec-info')
   const [sessionDateFilter, setSessionDateFilter] = useState<string>(() => new Date().toISOString().split('T')[0])
   const scrollRef      = useRef<HTMLDivElement>(null)
-  const opDisplayRef   = useRef<HTMLDivElement>(null)
-  const livePanelRef   = useRef<HTMLDivElement>(null)
+  const liveSessionRef = useRef<HTMLDivElement>(null)
   const healthRef      = useRef<HTMLDivElement>(null)
 
   const toggleFullscreen = (el: HTMLElement | null) => {
@@ -408,23 +407,19 @@ export default function ChargerDetailView({
                 : baseScreen
               return (
                 <section id="sec-live" style={SCROLL_MARGIN}>
-                  <div className="bg-background border border-border rounded-lg overflow-hidden">
-                    <div className="px-5 py-4 border-b border-border flex items-center gap-3">
+                  <div ref={liveSessionRef} className="bg-background border border-border rounded-lg overflow-hidden [&:fullscreen]:bg-background [&:fullscreen]:overflow-y-auto [&:fullscreen]:flex [&:fullscreen]:flex-col">
+                    <div className="px-5 py-4 border-b border-border flex items-center gap-3 shrink-0">
                       <span className="text-base font-semibold">Live session</span>
+                      <button onClick={() => toggleFullscreen(liveSessionRef.current)} title="Fullscreen"
+                        className="ml-auto p-1.5 rounded-md hover:bg-muted text-foreground/40 hover:text-foreground transition-colors cursor-pointer">
+                        <Maximize2 size={13} />
+                      </button>
                     </div>
-                    <div className="flex divide-x divide-border" style={{ height: 480 }}>
-                      <div ref={opDisplayRef} className="relative w-[380px] shrink-0 bg-neutral-100 [&:fullscreen]:bg-neutral-100">
-                        <button onClick={() => toggleFullscreen(opDisplayRef.current)} title="Fullscreen"
-                          className="absolute top-2 right-2 z-10 p-1.5 rounded-md bg-background/70 hover:bg-background text-foreground/60 hover:text-foreground border border-border/40 transition-colors cursor-pointer">
-                          <Maximize2 size={13} />
-                        </button>
+                    <div className="flex items-start divide-x divide-border min-h-[480px] [:fullscreen_&]:flex-1 [:fullscreen_&]:items-stretch [:fullscreen_&]:min-h-0">
+                      <div className="w-[340px] shrink-0 bg-neutral-100 px-4 py-4 [:fullscreen_&]:w-[40%]">
                         <OperatorDisplay screen={screen} />
                       </div>
-                      <div ref={livePanelRef} className="relative flex-1 min-w-0 [&:fullscreen]:bg-background [&:fullscreen]:overflow-y-auto [&:fullscreen]:p-16">
-                        <button onClick={() => toggleFullscreen(livePanelRef.current)} title="Fullscreen"
-                          className="absolute top-2 right-2 z-10 p-1.5 rounded-md bg-background/70 hover:bg-background text-foreground/60 hover:text-foreground border border-border/40 transition-colors cursor-pointer">
-                          <Maximize2 size={13} />
-                        </button>
+                      <div className="flex-1 min-w-0 overflow-y-auto">
                         <LiveSessionPanel session={liveSession} charger={charger} elapsed={elapsed} lastSession={lastSession} />
                       </div>
                     </div>
