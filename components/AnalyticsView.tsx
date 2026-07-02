@@ -230,9 +230,10 @@ export default function AnalyticsView() {
     const avail = CHARGER_AVAILABILITY[charger.num]
     return {
       charger, sessions, totalEnergy, avgMins, effVal, successRate, utilizationPct,
-      chargerUptimePct: avail?.chargerUptimePct ?? null,
-      dataUptimePct:    avail?.dataUptimePct    ?? null,
-      powerAvailPct:    avail?.powerAvailPct    ?? null,
+      chargerUptimePct:        avail?.chargerUptimePct        ?? null,
+      dataUptimePct:           avail?.dataUptimePct           ?? null,
+      dataUptimePerCyclePct:   avail?.dataUptimePerCyclePct   ?? null,
+      powerAvailPct:           avail?.powerAvailPct           ?? null,
     }
   }), [visible, periodRange, pMins])
 
@@ -242,18 +243,19 @@ export default function AnalyticsView() {
     const effs = all.map(eff).filter((e): e is number => e !== null)
     const successN = all.filter(s => s.status === 'success').length
     const withAvail = rows.filter(r => r.chargerUptimePct !== null)
-    const avgOf = (key: 'chargerUptimePct' | 'dataUptimePct' | 'powerAvailPct' | 'utilizationPct') =>
+    const avgOf = (key: 'chargerUptimePct' | 'dataUptimePct' | 'dataUptimePerCyclePct' | 'powerAvailPct' | 'utilizationPct') =>
       rows.length > 0 ? Math.round(rows.reduce((a, r) => a + (r[key] ?? 0), 0) / rows.length) : null
     return {
-      sessions:         n,
-      successRate:      n > 0 ? Math.round((successN / n) * 100) : null,
-      avgMins:          n > 0 ? Math.round(all.reduce((a, s) => a + s.durationMins, 0) / n) : null,
-      energy:           all.reduce((a, s) => a + s.energySoldKwh, 0),
-      effVal:           effs.length > 0 ? Math.round(effs.reduce((a, b) => a + b) / effs.length) : null,
-      chargerUptimePct: withAvail.length > 0 ? avgOf('chargerUptimePct') : null,
-      dataUptimePct:    withAvail.length > 0 ? avgOf('dataUptimePct')    : null,
-      powerAvailPct:    withAvail.length > 0 ? avgOf('powerAvailPct')    : null,
-      utilizationPct:   avgOf('utilizationPct'),
+      sessions:               n,
+      successRate:            n > 0 ? Math.round((successN / n) * 100) : null,
+      avgMins:                n > 0 ? Math.round(all.reduce((a, s) => a + s.durationMins, 0) / n) : null,
+      energy:                 all.reduce((a, s) => a + s.energySoldKwh, 0),
+      effVal:                 effs.length > 0 ? Math.round(effs.reduce((a, b) => a + b) / effs.length) : null,
+      chargerUptimePct:       withAvail.length > 0 ? avgOf('chargerUptimePct')      : null,
+      dataUptimePct:          withAvail.length > 0 ? avgOf('dataUptimePct')         : null,
+      dataUptimePerCyclePct:  withAvail.length > 0 ? avgOf('dataUptimePerCyclePct') : null,
+      powerAvailPct:          withAvail.length > 0 ? avgOf('powerAvailPct')         : null,
+      utilizationPct:         avgOf('utilizationPct'),
     }
   }, [rows])
 
@@ -347,7 +349,6 @@ export default function AnalyticsView() {
           <div className="grid grid-cols-4 divide-x divide-border bg-muted/20">
             {[
               { label: 'Charger uptime',     value: agg.chargerUptimePct != null ? `${agg.chargerUptimePct}` : '—', unit: agg.chargerUptimePct != null ? '%' : '', color: ragPct(agg.chargerUptimePct, 95, 85) },
-              { label: 'Data uptime',        value: agg.dataUptimePct    != null ? `${agg.dataUptimePct}`    : '—', unit: agg.dataUptimePct    != null ? '%' : '', color: ragPct(agg.dataUptimePct,    95, 85) },
               { label: 'Power availability', value: agg.powerAvailPct    != null ? `${agg.powerAvailPct}`    : '—', unit: agg.powerAvailPct    != null ? '%' : '', color: ragPct(agg.powerAvailPct,    95, 85) },
               { label: 'Utilization',        value: agg.utilizationPct   != null ? `${agg.utilizationPct}`   : '—', unit: agg.utilizationPct   != null ? '%' : '', color: ''                                   },
             ].map(({ label, value, unit, color }) => (
@@ -358,12 +359,26 @@ export default function AnalyticsView() {
                 </p>
               </div>
             ))}
+            <div className="px-6 py-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-text-secondary mb-1.5">Data uptime</p>
+              <div className="flex items-baseline gap-2">
+                <span className={`text-2xl font-bold tabular-nums leading-none ${ragPct(agg.dataUptimePct, 99, 95)}`}>
+                  {agg.dataUptimePct != null ? `${agg.dataUptimePct}%` : '—'}
+                </span>
+                <span className="text-sm text-text-secondary">min</span>
+                <span className="text-sm text-text-secondary">·</span>
+                <span className={`text-2xl font-bold tabular-nums leading-none ${ragPct(agg.dataUptimePerCyclePct, 99, 95)}`}>
+                  {agg.dataUptimePerCyclePct != null ? `${agg.dataUptimePerCyclePct}%` : '—'}
+                </span>
+                <span className="text-sm text-text-secondary">cyc</span>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Per-charger rows */}
         <div className="flex flex-col gap-4">
-          {rows.map(({ charger, sessions, totalEnergy, avgMins, effVal, successRate, utilizationPct, chargerUptimePct, dataUptimePct }) => {
+          {rows.map(({ charger, sessions, totalEnergy, avgMins, effVal, successRate, utilizationPct, chargerUptimePct, dataUptimePct, dataUptimePerCyclePct }) => {
             const isOpen = expanded.has(charger.num)
             const has = sessions.length > 0
             return (
@@ -393,9 +408,15 @@ export default function AnalyticsView() {
                       <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Charger uptime</p>
                       <p className={`text-sm font-bold tabular-nums ${ragPct(chargerUptimePct, 95, 85)}`}>{chargerUptimePct != null ? `${chargerUptimePct}%` : '—'}</p>
                     </div>
-                    <div className="text-right w-[68px] shrink-0">
+                    <div className="text-right w-[140px] shrink-0">
                       <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Data uptime</p>
-                      <p className={`text-sm font-bold tabular-nums ${ragPct(dataUptimePct, 95, 85)}`}>{dataUptimePct != null ? `${dataUptimePct}%` : '—'}</p>
+                      <div className="flex items-baseline justify-end gap-1">
+                        <span className={`text-sm font-bold tabular-nums ${ragPct(dataUptimePct, 99, 95)}`}>{dataUptimePct != null ? `${dataUptimePct}%` : '—'}</span>
+                        <span className="text-[9px] text-text-secondary">min</span>
+                        <span className="text-[9px] text-text-secondary mx-0.5">·</span>
+                        <span className={`text-sm font-bold tabular-nums ${ragPct(dataUptimePerCyclePct, 99, 95)}`}>{dataUptimePerCyclePct != null ? `${dataUptimePerCyclePct}%` : '—'}</span>
+                        <span className="text-[9px] text-text-secondary">cyc</span>
+                      </div>
                     </div>
                     <div className="text-right w-[72px] shrink-0">
                       <p className="text-[9px] font-bold uppercase tracking-wider text-text-secondary mb-0.5">Utilization</p>

@@ -511,8 +511,8 @@ export default function ChargerDetailView({
                       seed={2} n={30} lo={92} hi={100} target={98} />
                     <PerfCard title="Data Uptime" sub="30-day rolling avg" chartSub="Daily · last 15 days"
                       dual={[
-                        { label: 'Per-minute',  value: 98.8, unit: '%', isGreen: v => v >= 99.5 },
-                        { label: 'Per-cycle',   value: 96.2, unit: '%', isGreen: v => v >= 95   },
+                        { label: 'Per-minute',  value: 98.8, unit: '%', isGreen: v => v >= 99 },
+                        { label: 'Per-cycle',   value: 96.2, unit: '%', isGreen: v => v >= 99 },
                       ]}
                       seed={1} n={15} lo={88} hi={100} target={99.5}
                       grouped d2Lo={82} d2Hi={100} groupLabels={['Per-min', 'Per-cycle']} />
